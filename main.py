@@ -71,30 +71,53 @@ def get_article(title):
     return query_page[first_page]["revisions"][0]["slots"]["main"]["*"]
 
 def get_facts():
-    return [(line, index) for index, line in enumerate(get_article(config["WIKI"]["FactsSourcePage"]).split("\n")) if line.startswith("*") == True]
+    return [Fact(line, index) for index, line in enumerate(get_article(config["WIKI"]["FactsSourcePage"]).split("\n")) if line.startswith("*") == True]
 
 # these facts have a format like this:
 # * text <!--n--> where n is the counter.
-# following functions will help parse this as a tuple (text, n)
+# following class will help deal with this
 
 counter_re = re.compile(r"<!--(?:featured:)?(\d+)(?: time:(\d+))?-->")
 
-def fact_to_tuple(fact, index):
-    counter = counter_re.search(fact)
+class Fact:
+    def __init__(self, fact, index):
+        counter = counter_re.search(fact)
 
-    if counter is None:
-        return (fact, 0, index, 0)
+        self.line = index
 
-    fact_text = fact.replace(counter.group(0), "").rstrip()
-    return (fact_text, int(counter.group(1)), index, int(counter.group(2) or 0))
+        if counter is None:
+            self.text = fact
+            self.counter = 0
+            self.time = datetime.datetime.utcfromtimestamp(79200)
+        else:
+            fact_text = fact.replace(counter.group(0), "").rstrip()
 
-def tuple_to_fact(fact):
-    counter = " <!--featured:" + str(fact[1]) + " time:" + str(fact[2]) + "-->" if fact[1] > 0 else ""
-    return "%s%s" % (fact[0], counter)
+            self.text = fact_text
+            self.counter = int(counter.group(1))
+            timestamp = counter.group(2)
+            self.time = datetime.datetime.utcfromtimestamp(int(timestamp) if timestamp else 79200)
+
+    def __str__(self):
+        unix_time = int(self.time.timestamp())
+        counter = r"<!--featured:%s time:%s-->" % (self.counter, unix_time) if self.counter > 0 else ""
+        return "%s %s" % (self.text, counter)
+
+    def __repr__(self):
+        return "Fact(%s)" % str(self)
+
+    def add_counter(self):
+        self.counter += 1
+        self.time = datetime.datetime.utcnow()
+        return self
+
+    def is_older_than_time_limit(self):
+        delta = datetime.timedelta(days=int(config["WIKI"]["MinimumDaysBeforeRepeating"]))
+        now = datetime.datetime.utcnow()
+        return self.time < now - delta
 
 # sample random facts, prioritizing the ones which have been featured the least
 def sample_new_facts():
-    facts = [fact_to_tuple(f,i) for f,i in get_facts()]
+    facts = get_facts()
 
     sample = []
 
@@ -102,11 +125,8 @@ def sample_new_facts():
 
     cutoff = 0
 
-    delta = datetime.timedelta(days=int(config["WIKI"]["MinimumDaysBeforeRepeating"]))
-    now = datetime.datetime.utcnow()
-
     while (len(sample) <= number_of_facts):
-        minimum_counter_filter = [f for f in facts if f[1] == cutoff and datetime.datetime.utcfromtimestamp(f[3]) < now - delta]
+        minimum_counter_filter = [f for f in facts if f.counter == cutoff and f.is_older_than_time_limit()]
 
         sample += random.sample(minimum_counter_filter, min(len(minimum_counter_filter), number_of_facts))
 
@@ -135,8 +155,8 @@ def update_source_page(facts):
 
     lines = get_article(page).split("\n")
 
-    for fact, counter, index in facts:
-        lines[index] = tuple_to_fact((fact, counter, int(datetime.datetime.utcnow().timestamp())))
+    for fact in facts:
+        lines[fact.line] = str(fact)
 
     edited = "\n".join(lines)
 
@@ -145,11 +165,11 @@ def update_source_page(facts):
 def select_facts():
     facts = sample_new_facts()
 
-    facts_update_counter = [(fact, counter + 1, index) for fact, counter, index, _ in facts]
+    facts_update_counter = [f.add_counter() for f in facts]
 
     update_source_page(facts_update_counter)
 
-    text = "<noinclude><b>This page is edited automatically by the sickest bot you'll ever see, don't mess with it or else you'll die</b></noinclude>\n" + "\n".join([text for text, _, _, _ in facts])
+    text = "<noinclude><b>This page is edited automatically by the sickest bot you'll ever see, don't mess with it or else you'll die</b></noinclude>\n" + "\n".join([f.text for f in facts])
 
     edit_page(config["WIKI"]["FactsTemplate"], text, "Updating featured facts")
 
