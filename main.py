@@ -13,7 +13,7 @@ password = config["USER"]["Password"]
 
 session = requests.Session()
 
-wiki_url = config["WIKI"]["Url"] + "api.php"
+wiki_url = config["WIKI"]["Url"]
 
 def get_token(token_type):
     params = {
