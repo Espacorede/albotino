@@ -4,6 +4,8 @@ import json
 import random
 import requests
 import re
+import sys
+import time
 
 config = configparser.ConfigParser()
 config.read("config.ini")
@@ -80,7 +82,7 @@ def get_facts():
 counter_re = re.compile(r"<!--(?:featured:)?(\d+)(?: time:(\d+))?-->")
 
 class Fact:
-    def __init__(self, fact, index):
+    def __init__(self, fact, index = 0):
         counter = counter_re.search(fact)
 
         self.line = index
@@ -95,10 +97,10 @@ class Fact:
             self.text = fact_text
             self.counter = int(counter.group(1))
             timestamp = counter.group(2)
-            self.time = datetime.datetime.utcfromtimestamp(int(timestamp) if timestamp else 79200)
+            self.time = datetime.datetime.utcfromtimestamp(int(timestamp) / 1000 if timestamp else 79200)
 
     def __str__(self):
-        unix_time = int(self.time.timestamp())
+        unix_time = int(self.time.replace(tzinfo=datetime.timezone.utc).timestamp() * 1000)
         counter = r"<!--featured:%s time:%s-->" % (self.counter, unix_time) if self.counter > 0 else ""
         return "%s %s" % (self.text, counter)
 
@@ -108,6 +110,7 @@ class Fact:
     def add_counter(self):
         self.counter += 1
         self.time = datetime.datetime.utcnow()
+        time.sleep(0.001)
         return self
 
     def is_older_than_time_limit(self):
@@ -125,10 +128,17 @@ def sample_new_facts():
 
     cutoff = 0
 
+    top = max(map(lambda f: f.counter, facts))
+
     while (len(sample) <= number_of_facts):
         minimum_counter_filter = [f for f in facts if f.counter == cutoff and f.is_older_than_time_limit()]
 
-        sample += random.sample(minimum_counter_filter, min(len(minimum_counter_filter), number_of_facts))
+        if (cutoff > top and len(sample) == 0):
+            print("There's not enough facts that haven't been repeated in " + str(config["WIKI"]["MinimumDaysBeforeRepeating"]) + " days.")
+            print("Try lowering the MinimumDaysBeforeRepeating field in config.ini.")
+            sys.exit(-1)
+
+        sample += list(reversed(random.sample(minimum_counter_filter, min(len(minimum_counter_filter), number_of_facts))))
 
         cutoff += 1
         number_of_facts -= len(sample) - 1
@@ -157,6 +167,12 @@ def update_source_page(facts):
 
     for fact in facts:
         lines[fact.line] = str(fact)
+
+    messages = [line for line in lines if line.startswith("* ") == False]
+ 
+    facts = [line for line in lines if line.startswith("* ") == True]
+
+    lines = messages + sorted(facts, key=lambda x: Fact(x).time, reverse=True)
 
     edited = "\n".join(lines)
 
