@@ -1,0 +1,1 @@
+go build -o ./build/wikibot.exe -i -v wikibot.go
