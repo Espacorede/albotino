@@ -6,6 +6,8 @@ import (
 	"log"
 	"net/http"
 	"net/http/cookiejar"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/buger/jsonparser"
@@ -37,7 +39,7 @@ type WikiClient struct {
 
 func Wiki(username string, password string) WikiClient {
 	suffixList := suffixList{}
-	cookieOptions := cookiejar.Options{suffixList}
+	cookieOptions := cookiejar.Options{PublicSuffixList: suffixList}
 	cookieJar, _ := cookiejar.New(&cookieOptions)
 	webClient := http.Client{Jar: cookieJar, Timeout: time.Second * 10}
 	token := getToken(&webClient, "login")
@@ -79,4 +81,52 @@ func getToken(client *http.Client, tokenType string) string {
 		log.Panicln(err)
 	}
 	return str
+}
+
+func (w *WikiClient) WikiAPIRequest(parameters string) []byte {
+	req, err := http.NewRequest("POST", wiki+parameters, nil)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	resp, err := w.client.Do(req)
+	if err != nil {
+		log.Panicln(err)
+	}
+	defer resp.Body.Close()
+
+	bytes, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		log.Panicln(err)
+	}
+	return bytes
+}
+
+func (w *WikiClient) GetArticles(titles []string) []string {
+	parameters := fmt.Sprintf(`?action=query&prop=revisions&titles=%s&rvprop=content&format=json`, url.PathEscape(strings.Join(titles, "|")))
+	api := w.WikiAPIRequest(parameters)
+	var content []string
+
+	pages, _, _, err := jsonparser.Get(api, "query", "pages")
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	getPage := func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
+		rev, _, _, err := jsonparser.Get(value, "revisions")
+		if err != nil {
+			return err
+		}
+		_, err = jsonparser.ArrayEach(rev, func(value []byte, _ jsonparser.ValueType, _ int, _ error) {
+			page, _ := jsonparser.GetString(value, "*")
+			content = append(content, string(page))
+		})
+		return err
+	}
+	err = jsonparser.ObjectEach(pages, getPage)
+	if err != nil {
+		log.Panicln(err)
+	}
+
+	return content
 }

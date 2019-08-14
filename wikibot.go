@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/csv"
+	"fmt"
 	"log"
 	"os"
 
@@ -23,5 +24,10 @@ func main() {
 	botUsername := values[0]
 	botPassword := values[1]
 
-	client.Wiki(botUsername, botPassword)
+	bot := client.Wiki(botUsername, botPassword)
+
+	pages := []string{}
+	pages = append(pages, "User: Edmond Dantès", "Deadbeats/pt-br")
+	coolPages := bot.GetArticles(pages)
+	fmt.Println(coolPages)
 }
