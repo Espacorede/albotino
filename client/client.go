@@ -1,6 +1,7 @@
 package client
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -35,9 +36,10 @@ type WikiClient struct {
 	password string
 	client   *http.Client
 	token    string
+	channel  chan []byte
 }
 
-func Wiki(username string, password string) WikiClient {
+func Wiki(username string, password string) *WikiClient {
 	suffixList := suffixList{}
 	cookieOptions := cookiejar.Options{PublicSuffixList: suffixList}
 	cookieJar, _ := cookiejar.New(&cookieOptions)
@@ -55,7 +57,11 @@ func Wiki(username string, password string) WikiClient {
 		log.Panicln(err)
 	}
 
-	return WikiClient{username, password, &webClient, token}
+	client := WikiClient{username, password, &webClient, token, make(chan []byte)}
+
+	defer client.RequestLoop()
+
+	return &client
 }
 
 func getToken(client *http.Client, tokenType string) string {
@@ -83,50 +89,79 @@ func getToken(client *http.Client, tokenType string) string {
 	return str
 }
 
-func (w *WikiClient) WikiAPIRequest(parameters string) []byte {
-	req, err := http.NewRequest("POST", wiki+parameters, nil)
+func (w *WikiClient) RequestLoop() {
+	go func() {
+		for {
+			request := <-w.channel
+			resp, err := w.WikiAPIRequest(request)
+			if err != nil {
+				log.Printf("[RequestLoop] Error on API request: %s", err)
+				w.channel <- make([]byte, 0)
+			} else {
+				w.channel <- resp
+			}
+			time.Sleep(time.Second)
+		}
+	}()
+}
+
+func (w *WikiClient) WikiAPIRequest(parameters []byte) ([]byte, error) {
+	req, err := http.NewRequest("POST", wiki+string(parameters), nil)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 
 	resp, err := w.client.Do(req)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 	defer resp.Body.Close()
 
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
-	return bytes
+	return bytes, nil
 }
 
-func (w *WikiClient) GetArticles(titles []string) []string {
+func (w *WikiClient) DoRequest(parameters string) []byte {
+	w.channel <- []byte(parameters)
+	return <-w.channel
+}
+
+func (w *WikiClient) GetArticles(titles []string) (map[string][]byte, error) {
 	parameters := fmt.Sprintf(`?action=query&prop=revisions&titles=%s&rvprop=content&format=json`, url.PathEscape(strings.Join(titles, "|")))
-	api := w.WikiAPIRequest(parameters)
-	var content []string
+	api := w.DoRequest(parameters)
+	if len(api) == 0 {
+		return nil, errors.New("[GetArticles] Error making API request")
+	}
+	content := make(map[string][]byte)
 
 	pages, _, _, err := jsonparser.Get(api, "query", "pages")
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 
 	getPage := func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
-		rev, _, _, err := jsonparser.Get(value, "revisions")
+		title, err := jsonparser.GetString(value, "title")
 		if err != nil {
 			return err
 		}
+		rev, _, _, err := jsonparser.Get(value, "revisions")
+		if err != nil {
+			content[title] = []byte("")
+			return nil
+		}
 		_, err = jsonparser.ArrayEach(rev, func(value []byte, _ jsonparser.ValueType, _ int, _ error) {
-			page, _ := jsonparser.GetString(value, "*")
-			content = append(content, string(page))
+			page, _, _, _ := jsonparser.Get(value, "*")
+			content[title] = page
 		})
 		return err
 	}
 	err = jsonparser.ObjectEach(pages, getPage)
 	if err != nil {
-		log.Panicln(err)
+		return nil, err
 	}
 
-	return content
+	return content, nil
 }
