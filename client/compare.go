@@ -7,36 +7,69 @@ import (
 	"strings"
 )
 
-var link = regexp.MustCompile(`\[\[(.*?)(?:\||]])`)
-var template = regexp.MustCompile(`{{((?:.)*?)[\n|]`)
-var parameter = regexp.MustCompile(`\|\s*?(.*?)\s`)
-var nowiki = regexp.MustCompile(`<nowiki>((?:.|\n)*?)<\/nowiki>`)
+var languages = []string{"ar", "cs", "da", "de", "es", "fi", "fr", "hu", "it", "ja", "ko", "nl", "no", "pl", "pt", "pt-br", "ro", "ru", "sv", "tr", "zh-hans", "zh-hant"}
+
+var link = regexp.MustCompile(`\[\[(.+?)(?:\||]])`)
+var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
+var parameter = regexp.MustCompile(`\|\s*?(.+?)\s`)
+var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
 func (w *WikiClient) CompareTranslations(title string) {
-	titles := []string{title}
-	api, err := w.GetArticles(titles)
-	if err != nil {
-		log.Printf("[CompareTranslations] Error getting articles:\n%s", err.Error())
+	var trimTitle string
+	nonEnglish := strings.LastIndex(title, "/")
+	if nonEnglish == -1 {
+		trimTitle = title
+	} else {
+		trimTitle = title[0:nonEnglish]
+	}
+	titles := []string{trimTitle}
+
+	for _, lang := range languages {
+		titles = append(titles, trimTitle+"/"+lang)
 	}
 
-	links := w.GetLinks(api[title])
+	api, err := w.GetArticles(titles)
+	if err != nil {
+		log.Printf("[CompareTranslations] Error getting articles->\n\t%s", err.Error())
+	}
+
+	links := w.GetLinks(api[trimTitle], "")
+	templates := GetTemplates(api[trimTitle])
 	log.Println(links)
+	log.Println(templates)
+	for key, value := range api {
+		if key == trimTitle || value == nil {
+			continue
+		}
+		lang := title[(strings.LastIndex(title, "/") + 1):len(title)]
+		log.Println(w.GetLinks(value, lang))
+		log.Println(GetTemplates(value))
+	}
 }
 
-func (w *WikiClient) GetLinks(article []byte) map[string]int {
-	links := link.FindAllSubmatchIndex(article, -1)
+func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
+	links := link.FindAllSubmatch(article, -1)
+	fromTemplates := templateLinks.FindAllSubmatch(article, -1)
+	linkSlice := []string{}
+
+	for _, link := range links {
+		linkSlice = append(linkSlice, string(link[1]))
+	}
+	for _, link := range fromTemplates {
+		linkSlice = append(linkSlice, string(link[1])+lang)
+	}
+
+	linkSlice = w.GetRedirects(linkSlice)
 
 	linkDict := make(map[string]int)
 
-	for _, link := range links {
-		linkString := string(article[link[2]:link[3]])
-		count, exists := linkDict[linkString]
-
-		if exists {
-			linkDict[linkString] = count + 1
-		} else {
-			linkDict[linkString] = 1
+	for _, linkString := range linkSlice {
+		if isIgnoreLink(linkString) {
+			continue
 		}
+		count := linkDict[linkString]
+
+		linkDict[linkString] = count + 1
 	}
 	return linkDict
 }
@@ -44,7 +77,7 @@ func (w *WikiClient) GetLinks(article []byte) map[string]int {
 func (w *WikiClient) GetRedirects(titles []string) []string {
 	articles, err := w.GetArticles(titles)
 	if err != nil {
-		log.Printf("[GetRedirects] Error: %s", err)
+		log.Printf("[GetRedirects] Error->\n\t%s", err)
 		return nil
 	}
 	redirectTitles := make([]string, len(titles))
@@ -58,9 +91,4 @@ func (w *WikiClient) GetRedirects(titles []string) []string {
 	}
 
 	return redirectTitles
-}
-
-func (w *WikiClient) IsLink(template string) bool {
-	lower := strings.ToLower(template)
-	return (lower == "item link" || lower == "update link" || lower == "class link")
 }

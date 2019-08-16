@@ -139,17 +139,19 @@ func (w *WikiClient) GetArticles(titles []string) (map[string][]byte, error) {
 
 	pages, _, _, err := jsonparser.Get(api, "query", "pages")
 	if err != nil {
-		return nil, err
+		log.Println(titles)
+		log.Println(string(api))
+		return nil, fmt.Errorf("[GetArticles] Error getting json pages->\n\t%s", err)
 	}
 
 	getPage := func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
 		title, err := jsonparser.GetString(value, "title")
 		if err != nil {
-			return err
+			return fmt.Errorf("[GetArticles] Error getting json page title->\n\t%s", err)
 		}
 		rev, _, _, err := jsonparser.Get(value, "revisions")
 		if err != nil {
-			content[title] = []byte("")
+			// pagina não existe (provavelmente)
 			return nil
 		}
 		_, err = jsonparser.ArrayEach(rev, func(value []byte, _ jsonparser.ValueType, _ int, _ error) {
@@ -160,7 +162,7 @@ func (w *WikiClient) GetArticles(titles []string) (map[string][]byte, error) {
 	}
 	err = jsonparser.ObjectEach(pages, getPage)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("[GetArticles] Error iterating over pages->\n\t%s", err)
 	}
 
 	return content, nil
