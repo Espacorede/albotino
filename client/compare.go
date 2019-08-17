@@ -11,7 +11,7 @@ var languages = []string{"ar", "cs", "da", "de", "es", "fi", "fr", "hu", "it", "
 
 var link = regexp.MustCompile(`\[\[(.+?)(?:\||]])`)
 var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
-var parameter = regexp.MustCompile(`\|\s*?(.+?)\s`)
+var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
 func (w *WikiClient) CompareTranslations(title string) {
@@ -33,17 +33,24 @@ func (w *WikiClient) CompareTranslations(title string) {
 		log.Printf("[CompareTranslations] Error getting articles->\n\t%s", err.Error())
 	}
 
-	links := w.GetLinks(api[trimTitle], "")
-	templates := GetTemplates(api[trimTitle])
-	log.Println(links)
-	log.Println(templates)
+	english := api[trimTitle]
+
+	links := w.GetLinks(english, "")
+	templates := GetTemplates(english)
+	parameters := GetParameters(english)
 	for key, value := range api {
 		if key == trimTitle || value == nil {
 			continue
 		}
+		log.Println(key)
 		lang := title[(strings.LastIndex(title, "/") + 1):len(title)]
-		log.Println(w.GetLinks(value, lang))
-		log.Println(GetTemplates(value))
+		langLinks := w.GetLinks(value, lang)
+		langTemplates := GetTemplates(value)
+		langParameters := GetParameters(value)
+
+		log.Println(mapDifference(links, langLinks, lang))
+		log.Println(mapDifference(templates, langTemplates, ""))
+		log.Println(mapDifference(parameters, langParameters, ""))
 	}
 }
 
@@ -59,17 +66,15 @@ func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
 		linkSlice = append(linkSlice, string(link[1])+lang)
 	}
 
-	linkSlice = w.GetRedirects(linkSlice)
+	finalLinks := w.GetRedirects(linkSlice)
 
 	linkDict := make(map[string]int)
 
-	for _, linkString := range linkSlice {
+	for _, linkString := range finalLinks {
 		if isIgnoreLink(linkString) {
 			continue
 		}
-		count := linkDict[linkString]
-
-		linkDict[linkString] = count + 1
+		linkDict[linkString]++
 	}
 	return linkDict
 }
@@ -83,7 +88,7 @@ func (w *WikiClient) GetRedirects(titles []string) []string {
 	redirectTitles := make([]string, len(titles))
 	for index, name := range titles {
 		article := articles[name]
-		if bytes.Index(article, []byte("# REDIRECT")) == 0 {
+		if bytes.Index(article, []byte("#REDIRECT")) == 0 {
 			redirectTitles[index] = string(link.Find([]byte(article)))
 		} else {
 			redirectTitles[index] = name

@@ -27,7 +27,10 @@ func main() {
 	botPassword := values[1]
 
 	bot := client.Wiki(botUsername, botPassword)
+
 	bot.CompareTranslations("Deadbeats/pt-br")
+
+	log.Println(bot.GetRedirects([]string{"\u706b\u7130\u5175", "\u30d1\u30a4\u30ed", "\u041f\u043e\u0434\u0440\u044b\u0432\u043d\u0438\u043a"}))
 
 	listen, err := net.Listen("tcp", host)
 
