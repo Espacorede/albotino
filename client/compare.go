@@ -43,7 +43,7 @@ func (w *WikiClient) CompareTranslations(title string) {
 			continue
 		}
 		log.Println(key)
-		lang := title[(strings.LastIndex(title, "/") + 1):len(title)]
+		lang := key[(strings.LastIndex(key, "/") + 1):len(key)]
 		langLinks := w.GetLinks(value, lang)
 		langTemplates := GetTemplates(value)
 		langParameters := GetParameters(value)
@@ -63,7 +63,7 @@ func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
 		linkSlice = append(linkSlice, string(link[1]))
 	}
 	for _, link := range fromTemplates {
-		linkSlice = append(linkSlice, string(link[1])+lang)
+		linkSlice = append(linkSlice, string(link[1])+"/"+lang)
 	}
 
 	finalLinks := w.GetRedirects(linkSlice)
@@ -89,7 +89,7 @@ func (w *WikiClient) GetRedirects(titles []string) []string {
 	for index, name := range titles {
 		article := articles[name]
 		if bytes.Index(article, []byte("#REDIRECT")) == 0 {
-			redirectTitles[index] = string(link.Find([]byte(article)))
+			redirectTitles[index] = string(link.FindSubmatch(article)[1])
 		} else {
 			redirectTitles[index] = name
 		}
