@@ -77,8 +77,8 @@ func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
 	linkDict := make(map[string]int)
 
 	for _, linkString := range finalLinks {
-		if !isIgnoreLink(linkString) {
-			linkDict[linkString]++
+		if isIgnoreLink(linkString) {
+			continue
 		}
 	}
 	return linkDict
