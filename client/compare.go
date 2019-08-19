@@ -14,6 +14,8 @@ var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
+var stupidAssCharRegexpWhyDoINeedToDoThis = regexp.MustCompile(`^[a-z]`)
+
 func (w *WikiClient) CompareTranslations(title string) {
 	var trimTitle string
 	nonEnglish := strings.LastIndex(title, "/")
@@ -45,6 +47,7 @@ func (w *WikiClient) CompareTranslations(title string) {
 		log.Println(key)
 		lang := key[(strings.LastIndex(key, "/") + 1):len(key)]
 		langLinks := w.GetLinks(value, lang)
+
 		langTemplates := GetTemplates(value)
 		langParameters := GetParameters(value)
 
@@ -60,7 +63,10 @@ func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
 	linkSlice := []string{}
 
 	for _, link := range links {
-		linkSlice = append(linkSlice, string(link[1]))
+		title := string(stupidAssCharRegexpWhyDoINeedToDoThis.ReplaceAllFunc(link[1], func(match []byte) []byte {
+			return bytes.ToUpper(match)
+		}))
+		linkSlice = append(linkSlice, title)
 	}
 	for _, link := range fromTemplates {
 		linkSlice = append(linkSlice, string(link[1])+"/"+lang)
@@ -74,7 +80,6 @@ func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
 		if !isIgnoreLink(linkString) {
 			linkDict[linkString]++
 		}
-		linkDict[linkString]++
 	}
 	return linkDict
 }
@@ -94,6 +99,5 @@ func (w *WikiClient) GetRedirects(titles []string) []string {
 			redirectTitles[index] = name
 		}
 	}
-
 	return redirectTitles
 }
