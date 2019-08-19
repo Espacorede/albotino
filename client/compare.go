@@ -80,6 +80,7 @@ func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
 		if isIgnoreLink(linkString) {
 			continue
 		}
+		linkDict[linkString]++
 	}
 	return linkDict
 }
