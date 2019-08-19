@@ -98,7 +98,7 @@ func main() {
 	// 	[[Category:Items with styles/ja]]
 	// 	`)
 
-	// log.Println(bot.GetLinks(article, "ja"))
+	// client.GetTemplates(article)
 
 	listen, err := net.Listen("tcp", host)
 

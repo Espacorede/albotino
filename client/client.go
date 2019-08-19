@@ -129,13 +129,14 @@ func (w *WikiClient) DoRequest(parameters string) []byte {
 	return <-w.channel
 }
 
-func (w *WikiClient) GetArticles(titles []string) (map[string][]byte, error) {
+func (w *WikiClient) GetArticles(titles []string) (map[string]string, error) {
 	parameters := fmt.Sprintf(`?action=query&prop=revisions&titles=%s&rvprop=content&format=json`, url.PathEscape(strings.Join(titles, "|")))
 	api := w.DoRequest(parameters)
+
 	if len(api) == 0 {
 		return nil, errors.New("[GetArticles] Error making API request")
 	}
-	content := make(map[string][]byte)
+	content := make(map[string]string)
 
 	pages, _, _, err := jsonparser.Get(api, "query", "pages")
 	if err != nil {
@@ -155,7 +156,7 @@ func (w *WikiClient) GetArticles(titles []string) (map[string][]byte, error) {
 			return nil
 		}
 		_, err = jsonparser.ArrayEach(rev, func(value []byte, _ jsonparser.ValueType, _ int, _ error) {
-			page, _, _, _ := jsonparser.Get(value, "*")
+			page, _ := jsonparser.GetString(value, "*")
 			content[title] = page
 		})
 		return err

@@ -1,19 +1,30 @@
 package client
 
 import (
-	"log"
 	"regexp"
 	"strings"
 )
 
 var ignoreLinkRegexp = regexp.MustCompile(`(?i)^(w(ikia|ikipedia)?|p2|vdc):`)
 
+var stupidAssCharRegexpWhyDoINeedToDoThis = regexp.MustCompile(`^[a-z]`)
+
 func isIgnoreLink(link string) bool {
 	return ignoreLinkRegexp.MatchString(link)
 }
 
-func IsLink(template string) bool {
-	return strings.HasSuffix(strings.ToLower(template), "link")
+func IsIgnoreTemplate(template string) bool {
+	lower := strings.ToLower(template)
+	return strings.HasSuffix(lower, "link") ||
+		strings.HasSuffix(lower, "name") ||
+		lower == "common string" ||
+		lower == "trans"
+}
+
+func Title(str string) string {
+	return stupidAssCharRegexpWhyDoINeedToDoThis.ReplaceAllStringFunc(str, func(match string) string {
+		return strings.ToUpper(match)
+	})
 }
 
 func mapDifference(english map[string]int, translation map[string]int, lang string) map[string]int {
@@ -44,12 +55,12 @@ func mapDifference(english map[string]int, translation map[string]int, lang stri
 	return difference
 }
 
-func GetTemplates(article []byte) map[string]int {
-	templates := template.FindAllSubmatch(article, -1)
+func GetTemplates(article string) map[string]int {
+	templates := template.FindAllStringSubmatch(article, -1)
 	templatesSlice := []string{}
 	for _, template := range templates {
-		templateName := string(template[1])
-		if IsLink(templateName) || strings.HasPrefix(templateName, "DISPLAYTITLE:") {
+		templateName := Title(template[1])
+		if IsIgnoreTemplate(templateName) || strings.HasPrefix(templateName, "DISPLAYTITLE:") {
 			continue
 		}
 		templatesSlice = append(templatesSlice, templateName)
@@ -58,20 +69,17 @@ func GetTemplates(article []byte) map[string]int {
 	templatesDict := make(map[string]int)
 
 	for _, templateName := range templatesSlice {
-		if templateName == "Item infobox\n" {
-			log.Println(templates)
-		}
 		templatesDict[templateName]++
 	}
 	return templatesDict
 }
 
-func GetParameters(article []byte) map[string]int {
-	parameters := parameter.FindAllSubmatch(article, -1)
+func GetParameters(article string) map[string]int {
+	parameters := parameter.FindAllStringSubmatch(article, -1)
 	parametersDict := make(map[string]int)
 
 	for _, param := range parameters {
-		parameterName := string(param[1])
+		parameterName := param[1]
 		parametersDict[parameterName]++
 	}
 	return parametersDict

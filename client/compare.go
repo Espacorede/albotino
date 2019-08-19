@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"log"
 	"regexp"
 	"strings"
@@ -13,8 +12,6 @@ var link = regexp.MustCompile(`\[\[(.+?)(?:\||]])`)
 var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
-
-var stupidAssCharRegexpWhyDoINeedToDoThis = regexp.MustCompile(`^[a-z]`)
 
 func (w *WikiClient) CompareTranslations(title string) {
 	var trimTitle string
@@ -41,7 +38,7 @@ func (w *WikiClient) CompareTranslations(title string) {
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
 	for key, value := range api {
-		if key == trimTitle || value == nil {
+		if key == trimTitle || value == "" {
 			continue
 		}
 		log.Println(key)
@@ -57,19 +54,17 @@ func (w *WikiClient) CompareTranslations(title string) {
 	}
 }
 
-func (w *WikiClient) GetLinks(article []byte, lang string) map[string]int {
-	links := link.FindAllSubmatch(article, -1)
-	fromTemplates := templateLinks.FindAllSubmatch(article, -1)
+func (w *WikiClient) GetLinks(article string, lang string) map[string]int {
+	links := link.FindAllStringSubmatch(article, -1)
+	fromTemplates := templateLinks.FindAllStringSubmatch(article, -1)
 	linkSlice := []string{}
 
 	for _, link := range links {
-		title := string(stupidAssCharRegexpWhyDoINeedToDoThis.ReplaceAllFunc(link[1], func(match []byte) []byte {
-			return bytes.ToUpper(match)
-		}))
+		title := Title(link[1])
 		linkSlice = append(linkSlice, title)
 	}
 	for _, link := range fromTemplates {
-		linkSlice = append(linkSlice, string(link[1])+"/"+lang)
+		linkSlice = append(linkSlice, link[1]+"/"+lang)
 	}
 
 	finalLinks := w.GetRedirects(linkSlice)
@@ -94,8 +89,8 @@ func (w *WikiClient) GetRedirects(titles []string) []string {
 	redirectTitles := make([]string, len(titles))
 	for index, name := range titles {
 		article := articles[name]
-		if bytes.Index(article, []byte("#REDIRECT")) == 0 {
-			redirectTitles[index] = string(link.FindSubmatch(article)[1])
+		if strings.HasPrefix(article, "#REDIRECT") {
+			redirectTitles[index] = link.FindStringSubmatch(article)[1]
 		} else {
 			redirectTitles[index] = name
 		}
