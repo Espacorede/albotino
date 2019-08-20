@@ -13,6 +13,8 @@ var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
+var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
+
 func (w *WikiClient) CompareTranslations(title string) {
 	var trimTitle string
 	nonEnglish := strings.LastIndex(title, "/")
@@ -89,10 +91,11 @@ func (w *WikiClient) GetRedirects(titles []string) []string {
 	redirectTitles := make([]string, len(titles))
 	for index, name := range titles {
 		article := articles[name]
-		if strings.HasPrefix(article, "#REDIRECT") {
-			redirectTitles[index] = link.FindStringSubmatch(article)[1]
-		} else {
+		redirect := redirectRegexp.FindStringSubmatch(article)
+		if redirect == nil {
 			redirectTitles[index] = name
+		} else {
+			redirectTitles[index] = redirect[1]
 		}
 	}
 	return redirectTitles
