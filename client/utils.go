@@ -7,7 +7,7 @@ import (
 
 var ignoreLinkRegexp = regexp.MustCompile(`(?i)^(w(ikia|ikipedia)?|p2|vdc):`)
 
-var stupidAssCharRegexpWhyDoINeedToDoThis = regexp.MustCompile(`^[a-z]`)
+var firstCharRegexp = regexp.MustCompile(`^[a-z]`)
 
 func isIgnoreLink(link string) bool {
 	return ignoreLinkRegexp.MatchString(link)
@@ -22,7 +22,7 @@ func IsIgnoreTemplate(template string) bool {
 }
 
 func Title(str string) string {
-	return stupidAssCharRegexpWhyDoINeedToDoThis.ReplaceAllStringFunc(str, func(match string) string {
+	return firstCharRegexp.ReplaceAllStringFunc(str, func(match string) string {
 		return strings.ToUpper(match)
 	})
 }
