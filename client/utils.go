@@ -27,12 +27,25 @@ func Title(str string) string {
 	})
 }
 
-func mapDifference(english map[string]int, translation map[string]int, lang string) map[string]int {
+func sumMap(m map[string]int) int {
+	diff := 0
+	for _, value := range m {
+		if value < 0 {
+			diff -= value
+		} else {
+			diff += value
+		}
+	}
+	return diff
+}
+
+// nota pra mim mesmo: o parâmetro "linksLang" é só pra calcular os mapas de LINKS
+func mapDifference(english map[string]int, translation map[string]int, linksLang string) map[string]int {
 	difference := make(map[string]int)
 	for key, value := range english {
 		var transLinks int
-		if lang != "" {
-			langLink := key + "/" + lang
+		if linksLang != "" {
+			langLink := key + "/" + linksLang
 			transLinks += translation[langLink]
 		}
 		transLinks += translation[key]
@@ -83,4 +96,9 @@ func GetParameters(article string) map[string]int {
 		parametersDict[parameterName]++
 	}
 	return parametersDict
+}
+
+func GetHeaders(article string) int {
+	headers := header.FindAllString(article, -1)
+	return len(headers)
 }

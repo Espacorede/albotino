@@ -12,6 +12,7 @@ var link = regexp.MustCompile(`\[\[(.+?)(?:\||]])`)
 var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
+var header = regexp.MustCompile(`(?m)^=+\s*.+?\s*=+`)
 
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
@@ -36,27 +37,38 @@ func (w *WikiClient) CompareTranslations(title string) {
 
 	english := api[trimTitle]
 
-	links := w.GetLinks(english, "")
+	links, _ := w.GetLinks(english, "")
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
+	headers := GetHeaders(english)
+
 	for key, value := range api {
 		if key == trimTitle || value == "" {
 			continue
 		}
 		log.Println(key)
 		lang := key[(strings.LastIndex(key, "/") + 1):len(key)]
-		langLinks := w.GetLinks(value, lang)
+		langLinks, _ := w.GetLinks(value, lang)
 
 		langTemplates := GetTemplates(value)
 		langParameters := GetParameters(value)
+		langHeaders := GetHeaders(value)
 
-		log.Println(mapDifference(links, langLinks, lang))
-		log.Println(mapDifference(templates, langTemplates, ""))
-		log.Println(mapDifference(parameters, langParameters, ""))
+		linkDiff := mapDifference(links, langLinks, lang)
+		templateDiff := mapDifference(templates, langTemplates, "")
+		parametersDiff := mapDifference(parameters, langParameters, "")
+		headerDiff := headers - langHeaders
+
+		if headerDiff < 0 {
+			headerDiff *= -1
+		}
+
+		updatePoints := sumMap(linkDiff)*3 + sumMap(templateDiff)*5 + sumMap(parametersDiff) + headerDiff*3
+		log.Println(updatePoints)
 	}
 }
 
-func (w *WikiClient) GetLinks(article string, lang string) map[string]int {
+func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string) {
 	links := link.FindAllStringSubmatch(article, -1)
 	fromTemplates := templateLinks.FindAllStringSubmatch(article, -1)
 	linkSlice := []string{}
@@ -69,7 +81,7 @@ func (w *WikiClient) GetLinks(article string, lang string) map[string]int {
 		linkSlice = append(linkSlice, link[1]+"/"+lang)
 	}
 
-	finalLinks := w.GetRedirects(linkSlice)
+	finalLinks, redLinks := w.GetRedirects(linkSlice)
 
 	linkDict := make(map[string]int)
 
@@ -79,24 +91,29 @@ func (w *WikiClient) GetLinks(article string, lang string) map[string]int {
 		}
 		linkDict[linkString]++
 	}
-	return linkDict
+	return linkDict, redLinks
 }
 
-func (w *WikiClient) GetRedirects(titles []string) []string {
+func (w *WikiClient) GetRedirects(titles []string) ([]string, []string) {
 	articles, err := w.GetArticles(titles)
 	if err != nil {
 		log.Printf("[GetRedirects] Error->\n\t%s", err)
-		return nil
+		return nil, nil
 	}
 	redirectTitles := make([]string, len(titles))
+	redLinks := []string{}
 	for index, name := range titles {
 		article := articles[name]
 		redirect := redirectRegexp.FindStringSubmatch(article)
 		if redirect == nil {
 			redirectTitles[index] = name
+			if article == "" {
+				redLinks = append(redLinks, name)
+			}
 		} else {
 			redirectTitles[index] = redirect[1]
+
 		}
 	}
-	return redirectTitles
+	return redirectTitles, redLinks
 }
