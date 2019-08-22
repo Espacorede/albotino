@@ -63,7 +63,20 @@ func (w *WikiClient) CompareTranslations(title string) {
 			headerDiff *= -1
 		}
 
-		updatePoints := sumMap(linkDiff)*3 + sumMap(templateDiff)*5 + sumMap(parametersDiff) + headerDiff*3
+		linkPoints := sumMap(linkDiff) * 2
+		templatePoints := sumMap(templateDiff) * 3
+		headerPoints := headerDiff * 2
+		parameterPoints := sumMap(parametersDiff)
+
+		log.Println(linkDiff)
+		log.Println(linkPoints)
+		log.Println(templateDiff)
+		log.Println(templatePoints)
+		log.Println(parametersDiff)
+		log.Println(parameterPoints)
+		log.Println(headerPoints)
+
+		updatePoints := linkPoints + templatePoints + headerPoints + parameterPoints
 		log.Println(updatePoints)
 	}
 }
