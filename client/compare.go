@@ -12,7 +12,6 @@ var link = regexp.MustCompile(`\[\[(.+?)(?:\||]])`)
 var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
-var header = regexp.MustCompile(`(?m)^=+\s*.+?\s*=+`)
 
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
@@ -37,10 +36,11 @@ func (w *WikiClient) CompareTranslations(title string) {
 
 	english := api[trimTitle]
 
+	englishBytes := len([]byte(english))
+
 	links, _ := w.GetLinks(english, "")
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
-	headers := GetHeaders(english)
 
 	for key, value := range api {
 		if key == trimTitle || value == "" {
@@ -52,31 +52,19 @@ func (w *WikiClient) CompareTranslations(title string) {
 
 		langTemplates := GetTemplates(value)
 		langParameters := GetParameters(value)
-		langHeaders := GetHeaders(value)
 
 		linkDiff := mapDifference(links, langLinks, lang)
 		templateDiff := mapDifference(templates, langTemplates, "")
 		parametersDiff := mapDifference(parameters, langParameters, "")
-		headerDiff := headers - langHeaders
 
-		if headerDiff < 0 {
-			headerDiff *= -1
-		}
-
-		linkPoints := sumMap(linkDiff) * 2
-		templatePoints := sumMap(templateDiff) * 3
-		headerPoints := headerDiff * 2
+		linkPoints := sumMap(linkDiff)
+		templatePoints := sumMap(templateDiff)
 		parameterPoints := sumMap(parametersDiff)
 
-		log.Println(linkDiff)
-		log.Println(linkPoints)
-		log.Println(templateDiff)
-		log.Println(templatePoints)
-		log.Println(parametersDiff)
-		log.Println(parameterPoints)
-		log.Println(headerPoints)
+		languagePoints := linkPoints + templatePoints + parameterPoints
 
-		updatePoints := linkPoints + templatePoints + headerPoints + parameterPoints
+		updatePoints := (float64(languagePoints) / 100) * float64(englishBytes)
+
 		log.Println(updatePoints)
 	}
 }

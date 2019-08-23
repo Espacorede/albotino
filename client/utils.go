@@ -93,12 +93,10 @@ func GetParameters(article string) map[string]int {
 
 	for _, param := range parameters {
 		parameterName := param[1]
+		if parameterName == "prefix" {
+			continue
+		}
 		parametersDict[parameterName]++
 	}
 	return parametersDict
-}
-
-func GetHeaders(article string) int {
-	headers := header.FindAllString(article, -1)
-	return len(headers)
 }
