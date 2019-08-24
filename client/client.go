@@ -150,6 +150,11 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]string, error) {
 		if err != nil {
 			return fmt.Errorf("[GetArticles] Error getting json page title->\n\t%s", err)
 		}
+		namespace, err := jsonparser.GetInt(value, "ns")
+		if err == nil && namespace != 0 {
+			// página não está na namespace main, vamos ignorar ela porque eu só ligo pro main /shrug
+			return nil
+		}
 		rev, _, _, err := jsonparser.Get(value, "revisions")
 		if err != nil {
 			// pagina não existe (provavelmente)

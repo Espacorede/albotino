@@ -2,6 +2,7 @@ package client
 
 import (
 	"log"
+	"math"
 	"regexp"
 	"strings"
 )
@@ -42,6 +43,8 @@ func (w *WikiClient) CompareTranslations(title string) {
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
 
+	englishPoints := float64(sumMap(links) + sumMap(templates) + sumMap(parameters))
+
 	for key, value := range api {
 		if key == trimTitle || value == "" {
 			continue
@@ -61,9 +64,9 @@ func (w *WikiClient) CompareTranslations(title string) {
 		templatePoints := sumMap(templateDiff)
 		parameterPoints := sumMap(parametersDiff)
 
-		languagePoints := linkPoints + templatePoints + parameterPoints
+		languagePoints := float64(linkPoints + templatePoints + parameterPoints)
 
-		updatePoints := (float64(languagePoints) / 100) * float64(englishBytes)
+		updatePoints := math.Round((languagePoints / englishPoints) * 100 * float64(englishBytes))
 
 		log.Println(updatePoints)
 	}

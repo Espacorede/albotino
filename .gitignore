@@ -1,1 +1,2 @@
-build/*
+build/config.csv
+build/wikibot.exe
