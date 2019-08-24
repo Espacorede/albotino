@@ -1,0 +1,15 @@
+This page lists articles and the supposed outdatedness of each of their translations by a point system. The idea is that the higher the "score", the higher the apparent need for the translation to be updated to match the content of the English article.
+
+== Score ==
+
+The score is calculated taking into account elements that should be universal to all translations, such as links to equivalent pages and templates and their parameters that are used across all translations (some are not accounted for, like templates that are generally only used in translations and not in english, such as [[Template: Item link]]; parameters like the "prefix" parameter in [[Template: Item infobox]] where usage varies in languages; and external links).
+
+It also takes in account the size of the original article in English. Thus, translations of long articles that seem to be missing a lot of links and templates are supposed to have higher scores. 
+
+The size of the translations themselves is not accounted for, as it is not a very reliable and fair metric.
+
+The scores are meant to be more a comparison between their own languages. It should not be uncommon that different translations of the same page in different languages have the exact same score, as it probably meant that they were based on similar revisions of the English article with the same amount of links, templates and parameters.
+
+== Table == 
+
+%s
