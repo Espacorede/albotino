@@ -10,6 +10,8 @@ The size of the translations themselves is not accounted for, as it is not a ver
 
 The scores are meant to be more a comparison between their own languages. It should not be uncommon that different translations of the same page in different languages have the exact same score, as it probably meant that they were based on similar revisions of the English article with the same amount of links, templates and parameters.
 
+This is also in early testing and the way scores are calculated may be tweaked without warning.
+
 == Table == 
 
 %s

@@ -39,6 +39,11 @@ type WikiClient struct {
 	channel  chan []byte
 }
 
+type WikiPage struct {
+	namespace int64
+	article   string
+}
+
 func Wiki(username string, password string) *WikiClient {
 	suffixList := suffixList{}
 	cookieOptions := cookiejar.Options{PublicSuffixList: suffixList}
@@ -129,14 +134,14 @@ func (w *WikiClient) DoRequest(parameters string) []byte {
 	return <-w.channel
 }
 
-func (w *WikiClient) GetArticles(titles []string) (map[string]string, error) {
+func (w *WikiClient) GetArticles(titles []string) (map[string]WikiPage, error) {
 	parameters := fmt.Sprintf(`?action=query&prop=revisions&titles=%s&rvprop=content&format=json`, url.PathEscape(strings.Join(titles, "|")))
 	api := w.DoRequest(parameters)
 
 	if len(api) == 0 {
 		return nil, errors.New("[GetArticles] Error making API request")
 	}
-	content := make(map[string]string)
+	content := make(map[string]WikiPage)
 
 	pages, _, _, err := jsonparser.Get(api, "query", "pages")
 	if err != nil {
@@ -151,10 +156,6 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]string, error) {
 			return fmt.Errorf("[GetArticles] Error getting json page title->\n\t%s", err)
 		}
 		namespace, err := jsonparser.GetInt(value, "ns")
-		if err == nil && namespace != 0 {
-			// página não está na namespace main, vamos ignorar ela porque eu só ligo pro main /shrug
-			return nil
-		}
 		rev, _, _, err := jsonparser.Get(value, "revisions")
 		if err != nil {
 			// pagina não existe (provavelmente)
@@ -162,7 +163,7 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]string, error) {
 		}
 		_, err = jsonparser.ArrayEach(rev, func(value []byte, _ jsonparser.ValueType, _ int, _ error) {
 			page, _ := jsonparser.GetString(value, "*")
-			content[title] = page
+			content[title] = WikiPage{namespace: namespace, article: page}
 		})
 		return err
 	}
