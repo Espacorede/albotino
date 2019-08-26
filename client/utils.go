@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var ignoreLinkRegexp = regexp.MustCompile(`(?i)^(w(ikia|ikipedia)?|p2|vdc|file|image|media):`)
+var ignoreLinkRegexp = regexp.MustCompile(`(?i)^(w(ikia|ikipedia)?|p2|vdc):`)
 
 var firstCharRegexp = regexp.MustCompile(`^[a-z]`)
 
