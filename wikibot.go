@@ -2,14 +2,14 @@ package main
 
 import (
 	"encoding/csv"
+	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
+	"strings"
+	"time"
 
 	"./client"
 )
-
-const host = ":3000"
 
 func main() {
 	cfg, err := os.Open("config.csv")
@@ -28,13 +28,48 @@ func main() {
 
 	bot := client.Wiki(botUsername, botPassword)
 
-	bot.CompareTranslations("Deadbeats/pt-br")
+	// bot.CompareTranslations("Deadbeats/pt-br")
 
-	fs := http.FileServer(http.Dir("static/"))
+	os.Create("categories.txt")
+	os.Create("pages.txt")
 
-	http.Handle("/", http.StripPrefix("/static/", fs))
+	for {
+		categoriesFile, err := ioutil.ReadFile("categories.txt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		categories := strings.Split(string(categoriesFile), "\n")
 
-	log.Printf("Server listening at %s", host)
+		for i := len(categories) - 1; i >= 0; i-- {
+			category := categories[i]
+			trim := strings.Trim(category, " ")
+			if trim == "" {
+				continue
+			}
+			bot.CompareLinks(trim)
 
-	log.Fatalln(http.ListenAndServe(host, nil))
+			categories = categories[0:i]
+			ioutil.WriteFile("categories.txt", []byte(strings.Join(categories, "\n")), 0644)
+		}
+
+		pagesFile, err := ioutil.ReadFile("pages.txt")
+		if err != nil {
+			log.Fatal(err)
+		}
+		pages := strings.Split(string(pagesFile), "\n")
+
+		for i := len(pages) - 1; i >= 0; i-- {
+			page := pages[i]
+			trim := strings.Trim(page, " ")
+			if trim == "" {
+				continue
+			}
+			bot.CompareTranslations(trim)
+
+			pages = pages[0:i]
+			ioutil.WriteFile("pages.txt", []byte(strings.Join(pages, "\n")), 0644)
+		}
+
+		time.Sleep(time.Second * 30)
+	}
 }

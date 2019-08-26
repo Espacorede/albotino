@@ -55,7 +55,7 @@ func (w *WikiClient) CompareTranslations(title string) {
 	for _, lang := range languages {
 		titles = append(titles, trimTitle+"/"+lang)
 	}
-
+	log.Println("Comparing translations for " + trimTitle)
 	api, err := w.GetArticles(titles)
 	if err != nil {
 		log.Printf("[CompareTranslations] Error getting articles->\n\t%s", err.Error())
