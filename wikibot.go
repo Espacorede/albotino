@@ -30,28 +30,7 @@ func main() {
 
 	// bot.CompareTranslations("Deadbeats/pt-br")
 
-	os.Create("categories.txt")
-	os.Create("pages.txt")
-
 	for {
-		categoriesFile, err := ioutil.ReadFile("categories.txt")
-		if err != nil {
-			log.Fatal(err)
-		}
-		categories := strings.Split(string(categoriesFile), "\n")
-
-		for i := len(categories) - 1; i >= 0; i-- {
-			category := categories[i]
-			trim := strings.Trim(category, " ")
-			if trim == "" {
-				continue
-			}
-			bot.CompareLinks(trim)
-
-			categories = categories[0:i]
-			ioutil.WriteFile("categories.txt", []byte(strings.Join(categories, "\n")), 0644)
-		}
-
 		pagesFile, err := ioutil.ReadFile("pages.txt")
 		if err != nil {
 			log.Fatal(err)
@@ -64,12 +43,12 @@ func main() {
 			if trim == "" {
 				continue
 			}
-			bot.CompareTranslations(trim)
+			log.Println("Processing " + trim)
+			bot.ProcessArticle(trim, true)
 
 			pages = pages[0:i]
-			ioutil.WriteFile("pages.txt", []byte(strings.Join(pages, "\n")), 0644)
+			ioutil.WriteFile("queue.txt", []byte(strings.Join(pages, "\n")), 0644)
 		}
-
 		time.Sleep(time.Second * 30)
 	}
 }

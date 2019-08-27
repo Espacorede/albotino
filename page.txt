@@ -12,6 +12,30 @@ The scores are meant to be more a comparison between their own languages. It sho
 
 This is also in early testing and the way scores are calculated may be tweaked without warning.
 
+=== What counts for score ===
+
+* Links 
+** Obviously, links are accounted for in their languages. If the english article has a link to Article X, the bot will look for a link to Article X/es in the Spanish page. It also accounts for redirects, skipping directly to the page it redirects to, so they don't count as different links.
+** The templates item link, update link and class link are counted as links.
+** External links, including w:, p2:, vdc: and similar links, are completely ignored.
+
+* Templates
+** Templates that are used mostly in translations are not counted as templates. This includes the already mentioned "link" templates and their "name" counterparts as well as common string and lang icon.
+
+* Template parameters
+** Only the parameters themselves and not their content, as it obviously would vary wildly from language to language.
+
+=== What does not count for score ===
+
+* The text content
+** The algorithm can't read in any language. Sorry. 
+
+* Headers
+** May vary from language to language. Personally, I don't keep trivia relating to only the english name in translations, and I've seen other translators in other languages who also don't, so there's articles that have less headers than the English counterpart (cosmetics without trivia sections, for example). There may also be items that have exclusive trivia for the translation regarding the translated name, which would be the opposite.
+
+* External links
+** Another thing I personally prefer to leave out sometimes. If a link is in English, I generally don't put it in my translation unless it's absolutely, positively *very* relevant to the article. If it's a wikipedia article, it may not have a counterpart in the right language either.
+
 == Table == 
 
 %s

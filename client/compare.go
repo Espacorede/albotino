@@ -16,13 +16,7 @@ var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(
 
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
-func (w *WikiClient) CompareLinks(title string) error {
-	api, err := w.GetArticles([]string{title})
-	if err != nil {
-		return err
-	}
-	article := api[title].article
-
+func (w *WikiClient) CompareLinks(article string) error {
 	linkMatches := link.FindAllStringSubmatch(article, -1)
 
 	links := []string{}
@@ -38,34 +32,56 @@ func (w *WikiClient) CompareLinks(title string) error {
 
 func (w *WikiClient) CompareMultiple(titles []string) {
 	for _, article := range titles {
-		w.CompareTranslations(article)
+		w.ProcessArticle(article, false)
 	}
 }
 
-func (w *WikiClient) CompareTranslations(title string) {
+func (w *WikiClient) ProcessArticle(title string, recursion bool) {
 	var trimTitle string
 	nonEnglish := strings.LastIndex(title, "/")
 	if nonEnglish == -1 {
-		trimTitle = title
+		trimTitle = strings.Trim(title, " ")
 	} else {
-		trimTitle = title[0:nonEnglish]
+		trimTitle = strings.Trim(title[0:nonEnglish], " ")
 	}
 	titles := []string{trimTitle}
-
-	for _, lang := range languages {
-		titles = append(titles, trimTitle+"/"+lang)
-	}
-	log.Println("Comparing translations for " + trimTitle)
 	api, err := w.GetArticles(titles)
 	if err != nil {
 		log.Printf("[CompareTranslations] Error getting articles->\n\t%s", err.Error())
+		return
 	}
 
 	englishPage := api[trimTitle]
-	if englishPage.namespace != 0 {
+
+	if englishPage.article == "" {
+		log.Println("Page " + trimTitle + " not found.")
+	} else if englishPage.namespace != 0 {
+		if recursion {
+			log.Println("Comparing links for " + trimTitle)
+			w.CompareLinks(englishPage.article)
+		} else {
+			log.Println(trimTitle + " is not main; ignoring")
+			return
+		}
+	} else {
+		log.Println("Comparing translations for " + trimTitle)
+		w.CompareTranslations(trimTitle, englishPage.article)
+	}
+}
+
+func (w *WikiClient) CompareTranslations(title string, english string) {
+	titles := []string{}
+
+	for _, lang := range languages {
+		titles = append(titles, title+"/"+lang)
+	}
+
+	api, err := w.GetArticles(titles)
+
+	if err != nil {
+		log.Printf("[CompareTranslations] Error getting articles->\n\t%s", err.Error())
 		return
 	}
-	english := englishPage.article
 
 	englishBytes := len([]byte(english))
 
@@ -76,7 +92,7 @@ func (w *WikiClient) CompareTranslations(title string) {
 	englishPoints := float64(sumMap(links) + sumMap(templates) + sumMap(parameters))
 
 	for key, value := range api {
-		if key == trimTitle || value.article == "" {
+		if value.article == "" {
 			continue
 		}
 
