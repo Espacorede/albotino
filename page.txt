@@ -23,7 +23,8 @@ This is also in early testing and the way scores are calculated may be tweaked w
 ** Templates that are used mostly in translations are not counted as templates. This includes the already mentioned "link" templates and their "name" counterparts as well as common string and lang icon.
 
 * Template parameters
-** Only the parameters themselves and not their content, as it obviously would vary wildly from language to language.
+** Only the parameters themselves and not their content, as it obviously would vary wildly from language to language. 
+** Also excludes parameters that may vary, such as "prefix" (from the item infobox template; usage depends on whether the translated name has an article) or that are also exclusive to translated versions of pages such as en-sound on the quotation template.
 
 === What does not count for score ===
 

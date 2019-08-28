@@ -18,7 +18,8 @@ func IsIgnoreTemplate(template string) bool {
 	return strings.HasSuffix(lower, "link") ||
 		strings.HasSuffix(lower, "name") ||
 		lower == "common string" ||
-		lower == "trans"
+		lower == "trans" ||
+		lower == "update trans"
 }
 
 func Title(str string) string {
@@ -93,7 +94,8 @@ func GetParameters(article string) map[string]int {
 
 	for _, param := range parameters {
 		parameterName := param[1]
-		if parameterName == "prefix" {
+		if parameterName == "prefix" ||
+			parameterName == "en-sound" {
 			continue
 		}
 		parametersDict[parameterName]++

@@ -85,7 +85,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 	englishBytes := len([]byte(english))
 
-	links, _ := w.GetLinks(english, "")
+	links, _, _ := w.GetLinks(english, "")
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
 
@@ -101,7 +101,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 		langPage := value.article
 
-		langLinks, _ := w.GetLinks(langPage, lang)
+		langLinks, _, _ := w.GetLinks(langPage, lang)
 
 		langTemplates := GetTemplates(langPage)
 		langParameters := GetParameters(langPage)
@@ -122,14 +122,19 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 	}
 }
 
-func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string) {
+func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string, []string) {
 	links := link.FindAllStringSubmatch(article, -1)
 	fromTemplates := templateLinks.FindAllStringSubmatch(article, -1)
 	linkSlice := []string{}
+	wrongLanguage := []string{}
 
 	for _, link := range links {
 		title := Title(link[1])
 		linkSlice = append(linkSlice, title)
+
+		if !strings.HasSuffix(title, lang) {
+			wrongLanguage = append(wrongLanguage, title)
+		}
 	}
 	for _, link := range fromTemplates {
 		linkSlice = append(linkSlice, link[1]+"/"+lang)
@@ -145,7 +150,7 @@ func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []st
 		}
 		linkDict[linkString]++
 	}
-	return linkDict, redLinks
+	return linkDict, redLinks, wrongLanguage
 }
 
 func (w *WikiClient) GetRedirects(titles []string) ([]string, []string) {
