@@ -9,10 +9,10 @@ import (
 	"strings"
 	"time"
 
+	_ "github.com/mattn/go-sqlite3"
+
 	"./client"
 )
-
-var database
 
 func main() {
 	cfg, err := os.Open("config.csv")
@@ -31,12 +31,17 @@ func main() {
 
 	bot := client.Wiki(botUsername, botPassword)
 
-	database, err = sql.Open("sqlite3", "db/wikitranslations.db")
-	if err != nil {
-		log.Fatal("Error opening database. " + err)
+	database, databaseErr := sql.Open("sqlite3", "./db/wikitranslations.db")
+	if databaseErr != nil {
+		log.Fatal("Error opening database. " + databaseErr.Error())
 	}
-	statement, err := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title TEXT PRIMARY KEY, points FLOAT, lastseen DATE, brokenlinks TEXT, wronglinks TEXT")
+	defer database.Close()
+
+	statement, tableErr := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title TEXT PRIMARY KEY, points FLOAT, lastseen DATE, brokenlinks TEXT, wronglinks TEXT)")
 	statement.Exec()
+	if tableErr != nil {
+		log.Fatal("Error creating table. " + tableErr.Error())
+	}
 
 	// bot.CompareTranslations("Deadbeats/pt-br")
 

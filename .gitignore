@@ -1,4 +1,5 @@
 build/config.csv
 build/wikibot.exe
 build/queue.txt
+build/pages.txt
 build/db/*
