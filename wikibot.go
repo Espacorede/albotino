@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "github.com/lib/pq"
 
 	"./client"
 )
@@ -31,16 +31,26 @@ func main() {
 
 	bot := client.Wiki(botUsername, botPassword)
 
-	database, databaseErr := sql.Open("sqlite3", "./db/wikitranslations.db")
+	databaseData, err := ioutil.ReadFile("db.txt")
+	if err != nil {
+		log.Fatal("Error opening db.txt\n" + err)
+	}
+
+	database, databaseErr := sql.Open("postgres", databaseData)
 	if databaseErr != nil {
-		log.Fatal("Error opening database. " + databaseErr.Error())
+		log.Fatal("Error opening database. " + databaseErr)
 	}
 	defer database.Close()
+
+	err := database.Ping()
+	if err != nil {
+		log.Fatal("Error connecting to database. This is most likely a problem with db.txt. " + err)
+	}
 
 	statement, tableErr := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title TEXT PRIMARY KEY, points FLOAT, lastseen DATE, brokenlinks TEXT, wronglinks TEXT)")
 	statement.Exec()
 	if tableErr != nil {
-		log.Fatal("Error creating table. " + tableErr.Error())
+		log.Fatal("Error creating table. " + tableErr)
 	}
 
 	// bot.CompareTranslations("Deadbeats/pt-br")

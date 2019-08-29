@@ -85,7 +85,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 	englishBytes := len([]byte(english))
 
-	links, _, _ := w.GetLinks(english, "")
+	links, _ := w.GetLinks(english, "")
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
 
@@ -101,7 +101,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 		langPage := value.article
 
-		langLinks, _, _ := w.GetLinks(langPage, lang)
+		langLinks, wrongLinks := w.GetLinks(langPage, lang)
 
 		langTemplates := GetTemplates(langPage)
 		langParameters := GetParameters(langPage)
@@ -114,7 +114,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 		templatePoints := sumMap(templateDiff)
 		parameterPoints := sumMap(parametersDiff)
 
-		languagePoints := float64(linkPoints + templatePoints + parameterPoints)
+		languagePoints := float64(linkPoints + templatePoints + parameterPoints + len(wrongLinks))
 
 		updatePoints := math.Round((languagePoints / englishPoints) * float64(englishBytes))
 
@@ -122,7 +122,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 	}
 }
 
-func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string, []string) {
+func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string) {
 	links := link.FindAllStringSubmatch(article, -1)
 	fromTemplates := templateLinks.FindAllStringSubmatch(article, -1)
 	linkSlice := []string{}
@@ -140,7 +140,7 @@ func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []st
 		linkSlice = append(linkSlice, link[1]+"/"+lang)
 	}
 
-	finalLinks, redLinks := w.GetRedirects(linkSlice)
+	finalLinks := w.GetRedirects(linkSlice)
 
 	linkDict := make(map[string]int)
 
@@ -150,29 +150,25 @@ func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []st
 		}
 		linkDict[linkString]++
 	}
-	return linkDict, redLinks, wrongLanguage
+	return linkDict, wrongLanguage
 }
 
-func (w *WikiClient) GetRedirects(titles []string) ([]string, []string) {
+func (w *WikiClient) GetRedirects(titles []string) []string {
 	articles, err := w.GetArticles(titles)
 	if err != nil {
 		log.Printf("[GetRedirects] Error->\n\t%s", err)
-		return nil, nil
+		return nil
 	}
 	redirectTitles := make([]string, len(titles))
-	redLinks := []string{}
 	for index, name := range titles {
 		article := articles[name].article
 		redirect := redirectRegexp.FindStringSubmatch(article)
 		if redirect == nil {
 			redirectTitles[index] = name
-			if article == "" {
-				redLinks = append(redLinks, name)
-			}
 		} else {
 			redirectTitles[index] = redirect[1]
 
 		}
 	}
-	return redirectTitles, redLinks
+	return redirectTitles
 }
