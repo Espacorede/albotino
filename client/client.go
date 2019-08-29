@@ -1,6 +1,7 @@
 package client
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -12,6 +13,7 @@ import (
 	"time"
 
 	"github.com/buger/jsonparser"
+	_ "github.com/lib/pq"
 )
 
 const wiki string = "https://wiki.teamfortress.com/w/api.php"
@@ -37,6 +39,7 @@ type WikiClient struct {
 	client   *http.Client
 	token    string
 	channel  chan []byte
+	database *sql.DB
 }
 
 type WikiPage struct {
@@ -62,7 +65,28 @@ func Wiki(username string, password string) *WikiClient {
 		log.Panicln(err)
 	}
 
-	client := WikiClient{username, password, &webClient, token, make(chan []byte)}
+	databaseData, err := ioutil.ReadFile("db.txt")
+	if err != nil {
+		log.Fatalf("Error opening db.txt\n%s", err)
+	}
+
+	database, databaseErr := sql.Open("postgres", string(databaseData))
+	if databaseErr != nil {
+		log.Fatalf("Error opening database.\n%s", databaseErr)
+	}
+
+	err = database.Ping()
+	if err != nil {
+		log.Fatalf("Error connecting to database. This is most likely a problem with db.txt.\n%s", err)
+	}
+
+	statement, tableErr := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title VARCHAR(255) PRIMARY KEY, points FLOAT, lastseen DATE)")
+	statement.Exec()
+	if tableErr != nil {
+		log.Fatalf("Error creating table.\n%s", tableErr)
+	}
+
+	client := WikiClient{username, password, &webClient, token, make(chan []byte), database}
 
 	defer client.RequestLoop()
 

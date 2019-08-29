@@ -1,15 +1,12 @@
 package main
 
 import (
-	"database/sql"
 	"encoding/csv"
 	"io/ioutil"
 	"log"
 	"os"
 	"strings"
 	"time"
-
-	_ "github.com/lib/pq"
 
 	"./client"
 )
@@ -30,28 +27,6 @@ func main() {
 	botPassword := values[1]
 
 	bot := client.Wiki(botUsername, botPassword)
-
-	databaseData, err := ioutil.ReadFile("db.txt")
-	if err != nil {
-		log.Fatal("Error opening db.txt\n" + err)
-	}
-
-	database, databaseErr := sql.Open("postgres", databaseData)
-	if databaseErr != nil {
-		log.Fatal("Error opening database. " + databaseErr)
-	}
-	defer database.Close()
-
-	err := database.Ping()
-	if err != nil {
-		log.Fatal("Error connecting to database. This is most likely a problem with db.txt. " + err)
-	}
-
-	statement, tableErr := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title TEXT PRIMARY KEY, points FLOAT, lastseen DATE, brokenlinks TEXT, wronglinks TEXT)")
-	statement.Exec()
-	if tableErr != nil {
-		log.Fatal("Error creating table. " + tableErr)
-	}
 
 	// bot.CompareTranslations("Deadbeats/pt-br")
 
