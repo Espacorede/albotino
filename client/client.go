@@ -120,6 +120,7 @@ func getToken(client *http.Client, tokenType string) string {
 
 func (w *WikiClient) RequestLoop() {
 	go func() {
+		defer w.database.Close()
 		for {
 			request := <-w.channel
 			resp, err := w.WikiAPIRequest(request)

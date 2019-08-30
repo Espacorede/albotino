@@ -1,41 +1,6 @@
 This page lists articles and the supposed outdatedness of each of their translations by a point system. The idea is that the higher the "score", the higher the apparent need for the translation to be updated to match the content of the English article.
 
-== Score ==
-
-The score is calculated taking into account elements that should be universal to all translations, such as links to equivalent pages and templates and their parameters that are used across all translations (some are not accounted for, like templates that are generally only used in translations and not in english, such as [[Template: Item link]]; parameters like the "prefix" parameter in [[Template: Item infobox]] where usage varies in languages; and external links).
-
-It also takes in account the size of the original article in English. Thus, translations of long articles that seem to be missing a lot of links and templates are supposed to have higher scores. 
-
-The size of the translations themselves is not accounted for, as it is not a very reliable and fair metric.
-
-The scores are meant to be more a comparison between their own languages. It should not be uncommon that different translations of the same page in different languages have the exact same score, as it probably meant that they were based on similar revisions of the English article with the same amount of links, templates and parameters.
-
-This is also in early testing and the way scores are calculated may be tweaked without warning.
-
-=== What counts for score ===
-
-* Links 
-** Obviously, links are accounted for in their languages. If the english article has a link to Article X, the bot will look for a link to Article X/es in the Spanish page. It also accounts for redirects, skipping directly to the page it redirects to, so they don't count as different links.
-** The templates item link, update link and class link are counted as links.
-** External links, including w:, p2:, vdc: and similar links, are completely ignored.
-
-* Templates
-** Templates that are used mostly in translations are not counted as templates. This includes the already mentioned "link" templates and their "name" counterparts as well as common string and lang icon.
-
-* Template parameters
-** Only the parameters themselves and not their content, as it obviously would vary wildly from language to language. 
-** Also excludes parameters that may vary, such as "prefix" (from the item infobox template; usage depends on whether the translated name has an article) or that are also exclusive to translated versions of pages such as en-sound on the quotation template.
-
-=== What does not count for score ===
-
-* The text content
-** The algorithm can't read in any language. Sorry. 
-
-* Headers
-** May vary from language to language. Personally, I don't keep trivia relating to only the english name in translations, and I've seen other translators in other languages who also don't, so there's articles that have less headers than the English counterpart (cosmetics without trivia sections, for example). There may also be items that have exclusive trivia for the translation regarding the translated name, which would be the opposite.
-
-* External links
-** Another thing I personally prefer to leave out sometimes. If a link is in English, I generally don't put it in my translation unless it's absolutely, positively *very* relevant to the article. If it's a wikipedia article, it may not have a counterpart in the right language either.
+Source code for the algorithm that keeps track of this can be found [ here].
 
 == Table == 
 

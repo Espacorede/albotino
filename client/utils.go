@@ -19,7 +19,9 @@ func IsIgnoreTemplate(template string) bool {
 		strings.HasSuffix(lower, "name") ||
 		lower == "common string" ||
 		lower == "trans" ||
-		lower == "update trans"
+		lower == "update trans" ||
+		lower == "needimage" ||
+		lower == "needvideo"
 }
 
 func Title(str string) string {
