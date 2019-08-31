@@ -18,6 +18,9 @@ import (
 
 const wiki string = "https://wiki.teamfortress.com/w/api.php"
 
+var ignoreTemplates []string
+var ignoreParameters []string
+
 // a fazer: estudar o que raios esses métodos precisam fazer
 // https://golang.org/pkg/net/http/cookiejar/#PublicSuffixList
 // talvez tenha a ver com isso? https://publicsuffix.org/
@@ -89,6 +92,22 @@ func Wiki(username string, password string) *WikiClient {
 	client := WikiClient{username, password, &webClient, token, make(chan []byte), database}
 
 	defer client.RequestLoop()
+
+	templatesFile, err := ReadCsv("ignored_templates.csv")
+	if err != nil {
+		log.Printf("! Error reading ignored_templates.csv\n%s", err)
+		ignoreTemplates = []string{}
+	} else {
+		ignoreTemplates = templatesFile
+	}
+
+	parametersFile, err := ReadCsv("ignored_parameters.csv")
+	if err != nil {
+		log.Printf("! Error reading ignored_parameters.csv\n%s", err)
+		ignoreParameters = []string{}
+	} else {
+		ignoreParameters = parametersFile
+	}
 
 	return &client
 }
@@ -198,4 +217,13 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]WikiPage, error) {
 	}
 
 	return content, nil
+}
+
+func (w WikiClient) RenderPage() string {
+	pages, err := w.getDBEntries(false)
+	if err != nil {
+		log.Fatalf("[RenderPages] Error getting DB entries:\n%s", err)
+	}
+
+	return "fuck"
 }

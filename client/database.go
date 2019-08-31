@@ -24,13 +24,23 @@ func (w WikiClient) updateDBEntry(title string, points float64) error {
 	return err
 }
 
-func (w WikiClient) getDBEntries() ([]PageEntry, error) {
+func (w WikiClient) getDBEntries(outdated bool) ([]PageEntry, error) {
 	entries := []PageEntry{}
 
-	rows, err := w.database.Query(`
-	SELECT title, points
-	FROM wikipages
-	WHERE lastseen < CURRENT_DATE - interval '1 week'`)
+	var statement string
+
+	if outdated {
+		statement = `
+		SELECT title, points
+		FROM wikipages
+		WHERE lastseen < CURRENT_DATE - interval '1 week'`
+	} else {
+		statement = `
+		SELECT title, points
+		FROM wikipages`
+	}
+
+	rows, err := w.database.Query(statement)
 
 	if err != nil {
 		return nil, err

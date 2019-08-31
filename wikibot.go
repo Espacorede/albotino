@@ -1,10 +1,8 @@
 package main
 
 import (
-	"encoding/csv"
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 	"time"
 
@@ -12,13 +10,7 @@ import (
 )
 
 func main() {
-	cfg, err := os.Open("config.csv")
-	if err != nil {
-		log.Panicln(err)
-	}
-	csvreader := csv.NewReader(cfg)
-
-	values, err := csvreader.Read()
+	values, err := client.ReadCsv("config.csv")
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -31,7 +23,7 @@ func main() {
 	// bot.CompareTranslations("Deadbeats/pt-br")
 
 	for {
-		pagesFile, err := ioutil.ReadFile("pages.txt")
+		pagesFile, err := ioutil.ReadFile("queue.txt")
 		if err != nil {
 			log.Fatal(err)
 		}

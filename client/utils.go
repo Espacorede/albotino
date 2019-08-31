@@ -1,6 +1,8 @@
 package client
 
 import (
+	"encoding/csv"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -9,19 +11,40 @@ var ignoreLinkRegexp = regexp.MustCompile(`(?i)^(w(ikia|ikipedia)?|p2|vdc):`)
 
 var firstCharRegexp = regexp.MustCompile(`^[a-z]`)
 
+func ReadCsv(file string) ([]string, error) {
+	data, err := os.Open(file)
+	if err != nil {
+		return nil, err
+	}
+
+	csvreader := csv.NewReader(data)
+
+	values, err := csvreader.Read()
+	return values, err
+}
+
 func isIgnoreLink(link string) bool {
 	return ignoreLinkRegexp.MatchString(link)
 }
 
 func IsIgnoreTemplate(template string) bool {
 	lower := strings.ToLower(template)
-	return strings.HasSuffix(lower, "link") ||
-		strings.HasSuffix(lower, "name") ||
-		lower == "common string" ||
-		lower == "trans" ||
-		lower == "update trans" ||
-		lower == "needimage" ||
-		lower == "needvideo"
+	for _, template := range ignoreTemplates {
+		if lower == template {
+			return true
+		}
+	}
+	return false
+}
+
+func IsIgnoreParameter(parameter string) bool {
+	lower := strings.ToLower(parameter)
+	for _, parameter := range ignoreParameters {
+		if lower == parameter {
+			return true
+		}
+	}
+	return false
 }
 
 func Title(str string) string {
@@ -96,8 +119,7 @@ func GetParameters(article string) map[string]int {
 
 	for _, param := range parameters {
 		parameterName := param[1]
-		if parameterName == "prefix" ||
-			parameterName == "en-sound" {
+		if IsIgnoreParameter(parameterName) {
 			continue
 		}
 		parametersDict[parameterName]++
