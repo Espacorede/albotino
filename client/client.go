@@ -242,7 +242,7 @@ func (w WikiClient) RenderTable() string {
 		pb.WriteString(fmt.Sprintf("|- | [[%s]] ", page.title))
 
 		for index, language := range page.points {
-			pb.WriteString(fmt.Sprintf("|| [[%s|%f]]", page.title+languages[index], language))
+			pb.WriteString(fmt.Sprintf("|| [[%s|%f]]", page.title+"/"+languages[index], language))
 		}
 
 		pb.WriteString(fmt.Sprintf("|| %s ", page.lastupdate))
