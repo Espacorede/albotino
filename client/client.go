@@ -83,7 +83,7 @@ func Wiki(username string, password string) *WikiClient {
 		log.Fatalf("Error connecting to database. This is most likely a problem with db.txt.\n%s", err)
 	}
 
-	statement, tableErr := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title VARCHAR(255) PRIMARY KEY, points FLOAT, lastseen DATE)")
+	statement, tableErr := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title VARCHAR(255) PRIMARY KEY, points FLOAT[], lastseen DATE)")
 	statement.Exec()
 	if tableErr != nil {
 		log.Fatalf("Error creating table.\n%s", tableErr)
@@ -220,10 +220,33 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]WikiPage, error) {
 }
 
 func (w WikiClient) RenderPage() string {
+	page, err := ioutil.ReadFile("page.txt")
+	if err != nil {
+		log.Printf("[RenderPage] Error reading page.txt:\n%s", err)
+		return ""
+	}
+	return fmt.Sprintf(string(page), w.RenderTable())
+}
+
+func (w WikiClient) RenderTable() string {
 	pages, err := w.getDBEntries(false)
 	if err != nil {
-		log.Fatalf("[RenderPages] Error getting DB entries:\n%s", err)
+		log.Printf("[RenderTable] Error getting DB entries:\n%s", err)
+		return ""
 	}
 
-	return "fuck"
+	var sb strings.Builder
+
+	for _, page := range pages {
+		var pb strings.Builder
+		pb.WriteString(fmt.Sprintf("|- | [[%s]] ", page.title))
+
+		for index, language := range page.points {
+			pb.WriteString(fmt.Sprintf("|| [[%s|%f]]", page.title+languages[index], language))
+		}
+
+		pb.WriteString(fmt.Sprintf("|| %s ", page.lastupdate))
+		sb.WriteString(pb.String())
+	}
+	return sb.String()
 }

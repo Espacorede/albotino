@@ -6,4 +6,29 @@ Source code for the algorithm that keeps track of this can be found [ here] if y
 
 == Table == 
 
+{| class="wikitable grid sortable collapsible"
+! class="header" | Article
+! class="header" | ar
+! class="header" | cs
+! class="header" | da
+! class="header" | de
+! class="header" | es
+! class="header" | fi
+! class="header" | fr
+! class="header" | hu
+! class="header" | it
+! class="header" | ja
+! class="header" | ko
+! class="header" | nl
+! class="header" | no
+! class="header" | pl
+! class="header" | pt
+! class="header" | pt-br
+! class="header" | ru
+! class="header" | sv
+! class="header" | tr
+! class="header" | zh-hans
+! class="header" | zh-hant
+! class="header" | Last update
 %s
+|}

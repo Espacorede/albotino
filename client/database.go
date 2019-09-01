@@ -1,11 +1,12 @@
 package client
 
 type PageEntry struct {
-	title  string
-	points float64
+	title      string
+	points     []float64
+	lastupdate string
 }
 
-func (w WikiClient) insertDBEntry(title string, points float64) error {
+func (w WikiClient) insertDBEntry(title string, points []float64) error {
 	statement := `
 	INSERT INTO wikipages (title, points, lastseen)
 	VALUES ($1, $2, current_date)`
@@ -14,7 +15,7 @@ func (w WikiClient) insertDBEntry(title string, points float64) error {
 	return err
 }
 
-func (w WikiClient) updateDBEntry(title string, points float64) error {
+func (w WikiClient) updateDBEntry(title string, points []float64) error {
 	statement := `
 	UPDATE wikipages
 	SET points = $2, lastseen = CURRENT_DATE
@@ -31,12 +32,12 @@ func (w WikiClient) getDBEntries(outdated bool) ([]PageEntry, error) {
 
 	if outdated {
 		statement = `
-		SELECT title, points
+		SELECT title, points, lastseen
 		FROM wikipages
 		WHERE lastseen < CURRENT_DATE - interval '1 week'`
 	} else {
 		statement = `
-		SELECT title, points
+		SELECT title, points, lastseen
 		FROM wikipages`
 	}
 
@@ -48,13 +49,14 @@ func (w WikiClient) getDBEntries(outdated bool) ([]PageEntry, error) {
 	defer rows.Close()
 	for rows.Next() {
 		var title string
-		var points float64
-		err = rows.Scan(&title, &points)
+		var points []float64
+		var lastseen string
+		err = rows.Scan(&title, &points, &lastseen)
 		if err != nil {
 			return nil, err
 		}
 
-		entries = append(entries, PageEntry{title, points})
+		entries = append(entries, PageEntry{title, points, lastseen})
 	}
 
 	err = rows.Err()
