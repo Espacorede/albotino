@@ -1,1 +1,1 @@
-username,password
+username,password,dbhost,dbport,dbuser,dbpassword,dbname

@@ -91,6 +91,12 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 	englishPoints := float64(sumMap(links) + sumMap(templates) + sumMap(parameters))
 
+	languageValues := make([]int, len(languages))
+
+	for i := range languages {
+		languageValues[i] = -1
+	}
+
 	for key, value := range api {
 		if value.article == "" {
 			continue
@@ -98,6 +104,15 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 		log.Println(key)
 		lang := key[(strings.LastIndex(key, "/") + 1):len(key)]
+
+		langindex := -1
+
+		for index, icon := range languages {
+			if icon == lang {
+				langindex = index
+				break
+			}
+		}
 
 		langPage := value.article
 
@@ -118,8 +133,10 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 		updatePoints := math.Round((languagePoints / englishPoints) * float64(englishBytes))
 
-		log.Println(updatePoints)
+		languageValues[langindex] = int(updatePoints)
 	}
+
+	upsertDBEntry(title, languageValues)
 }
 
 func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string) {

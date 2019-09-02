@@ -10,17 +10,23 @@ import (
 )
 
 func main() {
-	values, err := client.ReadCsv("config.csv")
+	configCsv, err := client.ReadCsv("config.csv")
 	if err != nil {
 		log.Panicln(err)
 	}
 
-	botUsername := values[0]
-	botPassword := values[1]
+	err = client.SetupDatabase(configCsv[2], configCsv[3], configCsv[4], configCsv[5], configCsv[6])
+	if err != nil {
+		log.Panicln(err)
+	}
+	defer client.Database.Close()
+
+	botUsername := configCsv[0]
+	botPassword := configCsv[1]
 
 	bot := client.Wiki(botUsername, botPassword)
 
-	// bot.CompareTranslations("Deadbeats/pt-br")
+	bot.ProcessArticle("Deadbeats/pt-br", true)
 
 	for {
 		pagesFile, err := ioutil.ReadFile("queue.txt")

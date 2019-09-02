@@ -1,7 +1,6 @@
 package client
 
 import (
-	"database/sql"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -42,7 +41,6 @@ type WikiClient struct {
 	client   *http.Client
 	token    string
 	channel  chan []byte
-	database *sql.DB
 }
 
 type WikiPage struct {
@@ -68,28 +66,7 @@ func Wiki(username string, password string) *WikiClient {
 		log.Panicln(err)
 	}
 
-	databaseData, err := ioutil.ReadFile("db.txt")
-	if err != nil {
-		log.Fatalf("Error opening db.txt\n%s", err)
-	}
-
-	database, databaseErr := sql.Open("postgres", string(databaseData))
-	if databaseErr != nil {
-		log.Fatalf("Error opening database.\n%s", databaseErr)
-	}
-
-	err = database.Ping()
-	if err != nil {
-		log.Fatalf("Error connecting to database. This is most likely a problem with db.txt.\n%s", err)
-	}
-
-	statement, tableErr := database.Prepare("CREATE TABLE IF NOT EXISTS wikipages (title VARCHAR(255) PRIMARY KEY, points FLOAT[], lastseen DATE)")
-	statement.Exec()
-	if tableErr != nil {
-		log.Fatalf("Error creating table.\n%s", tableErr)
-	}
-
-	client := WikiClient{username, password, &webClient, token, make(chan []byte), database}
+	client := WikiClient{username, password, &webClient, token, make(chan []byte)}
 
 	defer client.RequestLoop()
 
@@ -139,7 +116,6 @@ func getToken(client *http.Client, tokenType string) string {
 
 func (w *WikiClient) RequestLoop() {
 	go func() {
-		defer w.database.Close()
 		for {
 			request := <-w.channel
 			resp, err := w.WikiAPIRequest(request)
@@ -229,7 +205,7 @@ func (w WikiClient) RenderPage() string {
 }
 
 func (w WikiClient) RenderTable() string {
-	pages, err := w.getDBEntries(false)
+	pages, err := getDBEntries(false)
 	if err != nil {
 		log.Printf("[RenderTable] Error getting DB entries:\n%s", err)
 		return ""
@@ -242,7 +218,7 @@ func (w WikiClient) RenderTable() string {
 		pb.WriteString(fmt.Sprintf("|- | [[%s]] ", page.title))
 
 		for index, language := range page.points {
-			pb.WriteString(fmt.Sprintf("|| [[%s|%f]]", page.title+"/"+languages[index], language))
+			pb.WriteString(fmt.Sprintf("|| [[%s|%d]]", page.title+"/"+languages[index], language))
 		}
 
 		pb.WriteString(fmt.Sprintf("|| %s ", page.lastupdate))
