@@ -56,7 +56,7 @@ func GetDescription(token string, lang string) (string, error) {
 	file := fmt.Sprintf(`%s\%s`, steamLocation, steamLocale[lang])
 	localizationFile, err := ioutil.ReadFile(file)
 
-	descriptionRegexp, err := regexp.Compile(fmt.Sprintf(`"%s_desc"\t*"(.+?)"`, token))
+	descriptionRegexp, err := regexp.Compile(fmt.Sprintf(`"%s_(?i)desc"\t*"(.+?)"`, token))
 	if err != nil {
 		return "", err
 	}

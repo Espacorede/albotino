@@ -172,11 +172,11 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 				for _, match := range descriptionMatch {
 					pageDescription := match[1]
 					if stsDescription != pageDescription {
-						descriptionBuf.WriteString(fmt.Sprintf(`%s has a wrong description paramenter. The correct description is \n\n\t"%s"\n\n`, key, stsDescription))
+						descriptionBuf.WriteString(fmt.Sprintf(`%s has a wrong description paramenter. The official description is "%s", not "%s".`, key, stsDescription, pageDescription) + "\r\n")
 					}
 				}
 			} else {
-				descriptionBuf.WriteString(fmt.Sprintf(`%s is missing item-description parameter. Its description is\n\n\t"%s"\n\n`, key, stsDescription))
+				descriptionBuf.WriteString(fmt.Sprintf(`%s is missing item-description parameter. Its official description is "%s".`, key, stsDescription) + "\r\n")
 			}
 		}
 
