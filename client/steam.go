@@ -33,8 +33,8 @@ var steamLocale map[string]string = map[string]string{
 	"zh-hant": "tf_tchinese.txt"}
 
 func GetToken(itemName string) (string, error) {
-	// podia ler do tf_english, mas prefiro ler de um traduzido porque dá uma leve especificade maior pro rege xcom o [english].
-	// o pt-br é bem completo, então vamos usá-lo.
+	// podia ler do tf_english, mas prefiro ler de um traduzido porque dá uma leve especificidade maior pro regex com o [english].
+	// o pt-br é bem completo, então o usaremos.
 	localizationFile, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", steamLocation, steamLocale["pt-br"]))
 	if err != nil {
 		return "", err

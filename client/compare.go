@@ -107,7 +107,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 	var stsToken string
 
 	if compareDescriptions {
-		descriptionFile, err = os.Create("descriptions.txt")
+		descriptionFile, err = os.Create("temp/descriptions.txt")
 		if err != nil {
 			log.Printf("[CompareTranslations] Error creating descriptions.txt->\n\t%s", err.Error())
 		} else {
