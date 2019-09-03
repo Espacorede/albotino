@@ -3,6 +3,7 @@ package main
 import (
 	"io/ioutil"
 	"log"
+	"os"
 	"strings"
 	"time"
 
@@ -15,6 +16,15 @@ func main() {
 		log.Panicln(err)
 	}
 
+	checkDescriptions := false
+
+	argv := os.Args[1:]
+
+	if argv[0] == "-d" {
+		checkDescriptions = true
+		argv = argv[1:]
+	}
+
 	db, err := client.SetupDatabase(configCsv[2], configCsv[3], configCsv[4], configCsv[5], configCsv[6])
 	if err != nil {
 		log.Panicln(err)
@@ -25,6 +35,10 @@ func main() {
 	botPassword := configCsv[1]
 
 	bot := client.Wiki(botUsername, botPassword)
+
+	for _, page := range argv {
+		bot.ProcessArticle(page, true, checkDescriptions)
+	}
 
 	log.Print(client.RenderPage())
 
@@ -42,7 +56,7 @@ func main() {
 				continue
 			}
 			log.Println("Processing " + trim)
-			bot.ProcessArticle(trim, true)
+			bot.ProcessArticle(trim, true, checkDescriptions)
 
 			pages = pages[0:i]
 			ioutil.WriteFile("queue.txt", []byte(strings.Join(pages, "\n")), 0644)

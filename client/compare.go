@@ -1,8 +1,11 @@
 package client
 
 import (
+	"bufio"
+	"fmt"
 	"log"
 	"math"
+	"os"
 	"regexp"
 	"strings"
 )
@@ -14,9 +17,11 @@ var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
+var descriptionRegexp = regexp.MustCompile(`\| item-description = (.+)`)
+
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
-func (w *WikiClient) CompareLinks(article string) error {
+func (w *WikiClient) CompareLinks(article string, compareDescriptions bool) error {
 	linkMatches := link.FindAllStringSubmatch(article, -1)
 
 	links := []string{}
@@ -25,18 +30,18 @@ func (w *WikiClient) CompareLinks(article string) error {
 		links = append(links, link[1])
 	}
 
-	w.CompareMultiple(links)
+	w.CompareMultiple(links, compareDescriptions)
 
 	return nil
 }
 
-func (w *WikiClient) CompareMultiple(titles []string) {
+func (w *WikiClient) CompareMultiple(titles []string, compareDescriptions bool) {
 	for _, article := range titles {
-		w.ProcessArticle(article, false)
+		w.ProcessArticle(article, false, compareDescriptions)
 	}
 }
 
-func (w *WikiClient) ProcessArticle(title string, recursion bool) {
+func (w *WikiClient) ProcessArticle(title string, recursion bool, compareDescriptions bool) {
 	var trimTitle string
 	nonEnglish := strings.LastIndex(title, "/")
 	if nonEnglish == -1 {
@@ -58,18 +63,18 @@ func (w *WikiClient) ProcessArticle(title string, recursion bool) {
 	} else if englishPage.namespace != 0 {
 		if recursion {
 			log.Println("Comparing links for " + trimTitle)
-			w.CompareLinks(englishPage.article)
+			w.CompareLinks(englishPage.article, compareDescriptions)
 		} else {
 			log.Println(trimTitle + " is not main; ignoring")
 			return
 		}
 	} else {
 		log.Println("Comparing translations for " + trimTitle)
-		w.CompareTranslations(trimTitle, englishPage.article)
+		w.CompareTranslations(trimTitle, englishPage.article, compareDescriptions)
 	}
 }
 
-func (w *WikiClient) CompareTranslations(title string, english string) {
+func (w *WikiClient) CompareTranslations(title string, english string, compareDescriptions bool) {
 	titles := []string{}
 
 	for _, lang := range languages {
@@ -95,6 +100,25 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 	for i := range languages {
 		languageValues[i] = -1
+	}
+
+	var descriptionFile *os.File
+	var descriptionBuf *bufio.Writer
+	var stsToken string
+
+	if compareDescriptions {
+		descriptionFile, err = os.Create("descriptions.txt")
+		if err != nil {
+			log.Printf("[CompareTranslations] Error creating descriptions.txt->\n\t%s", err.Error())
+		} else {
+			defer descriptionFile.Close()
+			descriptionBuf = bufio.NewWriter(descriptionFile)
+		}
+
+		stsToken, err = GetToken(title)
+		if err != nil {
+			log.Printf("[CompareTranslations] Error getting local token for %s->\n\t%s", title, err.Error())
+		}
 	}
 
 	for key, value := range api {
@@ -133,6 +157,30 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 		updatePoints := math.Round((languagePoints / englishPoints) * float64(englishBytes))
 
 		languageValues[langindex] = int64(updatePoints)
+
+		if descriptionFile != nil {
+			stsDescription, err := GetDescription(stsToken, lang)
+			if err != nil {
+				log.Printf("[CompareTranslations] Error getting description for %s->\n\t%s", key, err.Error())
+			}
+
+			if parametersDiff["item-description"] <= 0 {
+				descriptionMatch := descriptionRegexp.FindAllStringSubmatch(langPage, -1)
+				if descriptionMatch == nil {
+					log.Printf("[CompareTranslations] Error getting description from item-description paramenter in %s. This really shouldn't happen.", key)
+				}
+				for _, match := range descriptionMatch {
+					pageDescription := match[1]
+					if stsDescription != pageDescription {
+						descriptionBuf.WriteString(fmt.Sprintf(`%s has a wrong description paramenter. The correct description is \n\n\t"%s"\n\n`, key, stsDescription))
+					}
+				}
+			} else {
+				descriptionBuf.WriteString(fmt.Sprintf(`%s is missing item-description parameter. Its description is\n\n\t"%s"\n\n`, key, stsDescription))
+			}
+		}
+
+		descriptionBuf.Flush()
 
 		log.Printf("%s: %f points", key, updatePoints)
 	}
