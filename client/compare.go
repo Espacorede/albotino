@@ -91,7 +91,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 	englishPoints := float64(sumMap(links) + sumMap(templates) + sumMap(parameters))
 
-	languageValues := make([]int, len(languages))
+	languageValues := make([]int64, len(languages))
 
 	for i := range languages {
 		languageValues[i] = -1
@@ -102,7 +102,6 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 			continue
 		}
 
-		log.Println(key)
 		lang := key[(strings.LastIndex(key, "/") + 1):len(key)]
 
 		langindex := -1
@@ -133,7 +132,9 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 		updatePoints := math.Round((languagePoints / englishPoints) * float64(englishBytes))
 
-		languageValues[langindex] = int(updatePoints)
+		languageValues[langindex] = int64(updatePoints)
+
+		log.Printf("%s: %f points", key, updatePoints)
 	}
 
 	upsertDBEntry(title, languageValues)

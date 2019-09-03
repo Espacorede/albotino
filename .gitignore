@@ -1,5 +1,3 @@
 build/config.csv
 build/wikibot.exe
 build/queue.txt
-build/db.txt
-build/db/*

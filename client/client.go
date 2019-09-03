@@ -194,35 +194,3 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]WikiPage, error) {
 
 	return content, nil
 }
-
-func (w WikiClient) RenderPage() string {
-	page, err := ioutil.ReadFile("page.txt")
-	if err != nil {
-		log.Printf("[RenderPage] Error reading page.txt:\n%s", err)
-		return ""
-	}
-	return fmt.Sprintf(string(page), w.RenderTable())
-}
-
-func (w WikiClient) RenderTable() string {
-	pages, err := getDBEntries(false)
-	if err != nil {
-		log.Printf("[RenderTable] Error getting DB entries:\n%s", err)
-		return ""
-	}
-
-	var sb strings.Builder
-
-	for _, page := range pages {
-		var pb strings.Builder
-		pb.WriteString(fmt.Sprintf("|- | [[%s]] ", page.title))
-
-		for index, language := range page.points {
-			pb.WriteString(fmt.Sprintf("|| [[%s|%d]]", page.title+"/"+languages[index], language))
-		}
-
-		pb.WriteString(fmt.Sprintf("|| %s ", page.lastupdate))
-		sb.WriteString(pb.String())
-	}
-	return sb.String()
-}

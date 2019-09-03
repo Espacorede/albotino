@@ -15,18 +15,18 @@ func main() {
 		log.Panicln(err)
 	}
 
-	err = client.SetupDatabase(configCsv[2], configCsv[3], configCsv[4], configCsv[5], configCsv[6])
+	db, err := client.SetupDatabase(configCsv[2], configCsv[3], configCsv[4], configCsv[5], configCsv[6])
 	if err != nil {
 		log.Panicln(err)
 	}
-	defer client.Database.Close()
+	defer db.Close()
 
 	botUsername := configCsv[0]
 	botPassword := configCsv[1]
 
 	bot := client.Wiki(botUsername, botPassword)
 
-	bot.ProcessArticle("Deadbeats/pt-br", true)
+	log.Print(client.RenderPage())
 
 	for {
 		pagesFile, err := ioutil.ReadFile("queue.txt")
