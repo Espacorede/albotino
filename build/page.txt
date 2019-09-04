@@ -24,6 +24,7 @@ Source code for the algorithm that keeps track of this can be found [ here] if y
 ! class="header" | pl
 ! class="header" | pt
 ! class="header" | pt-br
+! class="header" | ro
 ! class="header" | ru
 ! class="header" | sv
 ! class="header" | tr

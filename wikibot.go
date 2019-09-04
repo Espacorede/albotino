@@ -37,10 +37,12 @@ func main() {
 	bot := client.Wiki(botUsername, botPassword)
 
 	for _, page := range argv {
-		bot.ProcessArticle(page, true, checkDescriptions)
+		bot.ProcessArticle(page, checkDescriptions)
 	}
 
 	log.Print(client.RenderPage())
+
+	firstLoop := true
 
 	for {
 		pagesFile, err := ioutil.ReadFile("queue.txt")
@@ -56,10 +58,23 @@ func main() {
 				continue
 			}
 			log.Println("Processing " + trim)
-			bot.ProcessArticle(trim, true, checkDescriptions)
+			bot.ProcessArticle(trim, checkDescriptions)
 
 			pages = pages[0:i]
 			ioutil.WriteFile("queue.txt", []byte(strings.Join(pages, "\n")), 0644)
+		}
+
+		if firstLoop {
+			db, err := client.GetDBEntries(true)
+			if err != nil {
+				log.Printf("Error getting outdated entries from the DB.")
+			}
+
+			for _, page := range db {
+				bot.ProcessArticle(page.Title, checkDescriptions)
+			}
+
+			firstLoop = false
 		}
 		time.Sleep(time.Second * 30)
 	}

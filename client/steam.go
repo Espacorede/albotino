@@ -1,10 +1,10 @@
 package client
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"unicode/utf16"
 )
 
 const steamLocation string = `C:\Program Files (x86)\Steam\steamapps\common\Team Fortress 2\tf\resource`
@@ -32,10 +32,24 @@ var steamLocale map[string]string = map[string]string{
 	"zh-hans": "tf_schinese.txt",
 	"zh-hant": "tf_tchinese.txt"}
 
+func readUTF16(filename string) (string, error) {
+	file, err := ioutil.ReadFile(filename)
+	if err != nil {
+		return "", err
+	}
+
+	short := make([]uint16, len(file)/2)
+	for i := 0; i < len(file); i += 2 {
+		short[i/2] = uint16(file[i+1])<<8 + uint16(file[i])
+	}
+
+	return string(utf16.Decode(short)), nil
+}
+
 func GetToken(itemName string) (string, error) {
 	// podia ler do tf_english, mas prefiro ler de um traduzido porque dá uma leve especificidade maior pro regex com o [english].
 	// o pt-br é bem completo, então o usaremos.
-	localizationFile, err := ioutil.ReadFile(fmt.Sprintf("%s/%s", steamLocation, steamLocale["pt-br"]))
+	localizationFile, err := readUTF16(fmt.Sprintf("%s/%s", steamLocation, steamLocale["pt-br"]))
 	if err != nil {
 		return "", err
 	}
@@ -44,9 +58,9 @@ func GetToken(itemName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	tokenMatch := itemTokenRegexp.FindStringSubmatch(string(localizationFile))
+	tokenMatch := itemTokenRegexp.FindStringSubmatch(localizationFile)
 	if tokenMatch == nil {
-		return "", errors.New("Token not found.")
+		return "", fmt.Errorf("Token for '%s' not found.", itemName)
 	}
 	token := tokenMatch[1]
 	return token, nil
@@ -54,15 +68,15 @@ func GetToken(itemName string) (string, error) {
 
 func GetDescription(token string, lang string) (string, error) {
 	file := fmt.Sprintf(`%s\%s`, steamLocation, steamLocale[lang])
-	localizationFile, err := ioutil.ReadFile(file)
+	localizationFile, err := readUTF16(file)
 
 	descriptionRegexp, err := regexp.Compile(fmt.Sprintf(`"%s_(?i)desc"\t*"(.+?)"`, token))
 	if err != nil {
 		return "", err
 	}
-	descriptionMatch := descriptionRegexp.FindStringSubmatch(string(localizationFile))
+	descriptionMatch := descriptionRegexp.FindStringSubmatch(localizationFile)
 	if descriptionMatch == nil {
-		return "", errors.New("Description not found")
+		return "", fmt.Errorf("%s Description for '%s' not found", lang, token)
 	}
 	description := descriptionMatch[1]
 

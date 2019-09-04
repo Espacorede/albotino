@@ -12,12 +12,15 @@ import (
 )
 
 type PageEntry struct {
-	title      string
+	Title      string
 	points     []sql.NullInt64
 	lastupdate time.Time
 }
 
 var database *sql.DB
+var upsert *sql.Stmt
+var allEntries *sql.Stmt
+var outOfDate *sql.Stmt
 
 func SetupDatabase(host string, port string, user string, password string, db string) (*sql.DB, error) {
 	dbString := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
@@ -36,17 +39,36 @@ func SetupDatabase(host string, port string, user string, password string, db st
 	}
 
 	_, err = database.Exec("CREATE TABLE IF NOT EXISTS wikipages (title VARCHAR(255) PRIMARY KEY, points INT[], lastseen DATE)")
+
+	upsert, err = database.Prepare(`
+		INSERT INTO wikipages (title, points, lastseen) 
+		VALUES ($1, $2, current_date)
+		ON CONFLICT (title) DO UPDATE 
+		SET points = excluded.points, 
+			lastseen = excluded.lastseen;`)
+	if err != nil {
+		return nil, err
+	}
+
+	allEntries, err = database.Prepare(`
+		SELECT title, points, lastseen
+		FROM wikipages`)
+	if err != nil {
+		return nil, err
+	}
+
+	outOfDate, err = database.Prepare(`
+	SELECT title, points, lastseen
+	FROM wikipages
+	WHERE lastseen < CURRENT_DATE - interval '1 week'`)
+	if err != nil {
+		return nil, err
+	}
+
 	return database, err
 }
 
 func upsertDBEntry(title string, points []int64) error {
-	statement := `
-	INSERT INTO wikipages (title, points, lastseen) 
-	VALUES ($1, $2, current_date)
-	ON CONFLICT (title) DO UPDATE 
-  	SET points = excluded.points, 
-	  lastseen = excluded.lastseen;`
-
 	sqlArray := make([]sql.NullInt64, len(points))
 
 	for index, num := range points {
@@ -57,28 +79,22 @@ func upsertDBEntry(title string, points []int64) error {
 		}
 	}
 
-	_, err := database.Exec(statement, title, pq.Array(sqlArray))
+	_, err := upsert.Exec(title, pq.Array(sqlArray))
 
 	return err
 }
 
-func getDBEntries(outdated bool) ([]PageEntry, error) {
+func GetDBEntries(outdated bool) ([]PageEntry, error) {
 	entries := []PageEntry{}
 
-	var statement string
+	var rows *sql.Rows
+	var err error
 
 	if outdated {
-		statement = `
-		SELECT title, points, lastseen
-		FROM wikipages
-		WHERE lastseen < CURRENT_DATE - interval '1 week'`
+		rows, err = outOfDate.Query()
 	} else {
-		statement = `
-		SELECT title, points, lastseen
-		FROM wikipages`
+		rows, err = allEntries.Query()
 	}
-
-	rows, err := database.Query(statement)
 
 	if err != nil {
 		return nil, err
@@ -113,7 +129,7 @@ func RenderPage() string {
 }
 
 func RenderTable() string {
-	pages, err := getDBEntries(false)
+	pages, err := GetDBEntries(false)
 	if err != nil {
 		log.Printf("[RenderTable] Error getting DB entries:\n%s", err)
 		return ""
@@ -123,7 +139,7 @@ func RenderTable() string {
 
 	for _, page := range pages {
 		var pb strings.Builder
-		pb.WriteString(fmt.Sprintf("|- | [[%s]] ", page.title))
+		pb.WriteString(fmt.Sprintf("|- | [[%s]] ", page.Title))
 
 		for index, language := range page.points {
 			var pointsString string
@@ -132,7 +148,7 @@ func RenderTable() string {
 			} else {
 				pointsString = "N/A"
 			}
-			pb.WriteString(fmt.Sprintf("|| [[%s|%s]]", page.title+"/"+languages[index], pointsString))
+			pb.WriteString(fmt.Sprintf("|| [[%s|%s]]", page.Title+"/"+languages[index], pointsString))
 		}
 
 		pb.WriteString(fmt.Sprintf("|| %s ", page.lastupdate))

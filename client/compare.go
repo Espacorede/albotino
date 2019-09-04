@@ -17,31 +17,11 @@ var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
-var descriptionRegexp = regexp.MustCompile(`\| item-description = (.+)`)
+var descriptionRegexp = regexp.MustCompile(`\| item-description\s+= (.+)`)
 
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
-func (w *WikiClient) CompareLinks(article string, compareDescriptions bool) error {
-	linkMatches := link.FindAllStringSubmatch(article, -1)
-
-	links := []string{}
-
-	for _, link := range linkMatches {
-		links = append(links, link[1])
-	}
-
-	w.CompareMultiple(links, compareDescriptions)
-
-	return nil
-}
-
-func (w *WikiClient) CompareMultiple(titles []string, compareDescriptions bool) {
-	for _, article := range titles {
-		w.ProcessArticle(article, false, compareDescriptions)
-	}
-}
-
-func (w *WikiClient) ProcessArticle(title string, recursion bool, compareDescriptions bool) {
+func (w *WikiClient) ProcessArticle(title string, compareDescriptions bool) {
 	var trimTitle string
 	nonEnglish := strings.LastIndex(title, "/")
 	if nonEnglish == -1 {
@@ -61,13 +41,8 @@ func (w *WikiClient) ProcessArticle(title string, recursion bool, compareDescrip
 	if englishPage.article == "" {
 		log.Println("Page " + trimTitle + " not found.")
 	} else if englishPage.namespace != 0 {
-		if recursion {
-			log.Println("Comparing links for " + trimTitle)
-			w.CompareLinks(englishPage.article, compareDescriptions)
-		} else {
-			log.Println(trimTitle + " is not main; ignoring")
-			return
-		}
+		log.Println(trimTitle + " is not main; ignoring")
+		return
 	} else {
 		log.Println("Comparing translations for " + trimTitle)
 		w.CompareTranslations(trimTitle, englishPage.article, compareDescriptions)
@@ -96,6 +71,8 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 
 	englishPoints := float64(sumMap(links) + sumMap(templates) + sumMap(parameters))
 
+	hasDescription := descriptionRegexp.MatchString(english)
+
 	languageValues := make([]int64, len(languages))
 
 	for i := range languages {
@@ -106,8 +83,8 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 	var descriptionBuf *bufio.Writer
 	var stsToken string
 
-	if compareDescriptions {
-		descriptionFile, err = os.Create("temp/descriptions.txt")
+	if compareDescriptions && hasDescription {
+		descriptionFile, err = os.OpenFile("temp/descriptions.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Printf("[CompareTranslations] Error creating descriptions.txt->\n\t%s", err.Error())
 		} else {
@@ -163,24 +140,23 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 			if err != nil {
 				log.Printf("[CompareTranslations] Error getting description for %s->\n\t%s", key, err.Error())
 			}
-
 			if parametersDiff["item-description"] <= 0 {
 				descriptionMatch := descriptionRegexp.FindAllStringSubmatch(langPage, -1)
 				if descriptionMatch == nil {
-					log.Printf("[CompareTranslations] Error getting description from item-description paramenter in %s. This really shouldn't happen.", key)
+					log.Printf("[CompareTranslations] Error getting description from item-description parameter in %s. This really shouldn't happen.", key)
 				}
 				for _, match := range descriptionMatch {
 					pageDescription := match[1]
 					if stsDescription != pageDescription {
-						descriptionBuf.WriteString(fmt.Sprintf(`%s has a wrong description paramenter. The official description is "%s", not "%s".`, key, stsDescription, pageDescription) + "\r\n")
+						descriptionBuf.WriteString(fmt.Sprintf("%s has a wrong description parameter. The official description is\n\n\t'%s'\n\n", key, stsDescription))
 					}
 				}
 			} else {
-				descriptionBuf.WriteString(fmt.Sprintf(`%s is missing item-description parameter. Its official description is "%s".`, key, stsDescription) + "\r\n")
+				descriptionBuf.WriteString(fmt.Sprintf("%s is missing item-description parameter. Its official description is\n\n\t'%s'\n\n", key, stsDescription))
 			}
-		}
 
-		descriptionBuf.Flush()
+			descriptionBuf.Flush()
+		}
 
 		log.Printf("%s: %f points", key, updatePoints)
 	}
