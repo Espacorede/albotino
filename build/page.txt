@@ -1,35 +1,34 @@
-This page lists articles and the supposed outdatedness of each of their translations by a point system. The idea is that the higher the "score", the higher the apparent need for the translation to be updated to match the content of the English article.
+This page lists articles and the supposed outdatedness of each of their translations by a point system. The idea is that the higher the "score" presented here, the higher the amount of content that would probably need to be updated in the article to match the English original. Obviously this is far from being a perfect measure and is mostly made as a reference as to what articles deserve being updated next in each language.
 
 Points are calculated based on a series of factors that can be compared between the original english page and the translations. Templates, links within the wiki and parameters are taken into account, as well as how long the original article was. Not all templates and parameters are taken into account, the ones that are generally only used in translations (or only in English) are ignored, as are all external links.
 
-Source code for the algorithm that keeps track of this can be found [ here] if you want to see for yourself.
+<!-- Source code for the algorithm that keeps track of this can be found [ here] if you want to see for yourself. nope not yet -->
 
 == Table == 
 
 {| class="wikitable grid sortable collapsible"
-! class="header" | Article
-! class="header" | ar
-! class="header" | cs
-! class="header" | da
-! class="header" | de
-! class="header" | es
-! class="header" | fi
-! class="header" | fr
-! class="header" | hu
-! class="header" | it
-! class="header" | ja
-! class="header" | ko
-! class="header" | nl
-! class="header" | no
-! class="header" | pl
-! class="header" | pt
-! class="header" | pt-br
-! class="header" | ro
-! class="header" | ru
-! class="header" | sv
-! class="header" | tr
-! class="header" | zh-hans
-! class="header" | zh-hant
+! class="header" data-sort-type="number" | Article
+! class="header" data-sort-type="number" | ar
+! class="header" data-sort-type="number" | cs
+! class="header" data-sort-type="number" | da
+! class="header" data-sort-type="number" | de
+! class="header" data-sort-type="number" | es
+! class="header" data-sort-type="number" | fi
+! class="header" data-sort-type="number" | fr
+! class="header" data-sort-type="number" | hu
+! class="header" data-sort-type="number" | it
+! class="header" data-sort-type="number" | ja
+! class="header" data-sort-type="number" | ko
+! class="header" data-sort-type="number" | nl
+! class="header" data-sort-type="number" | no
+! class="header" data-sort-type="number" | pl
+! class="header" data-sort-type="number" | pt
+! class="header" data-sort-type="number" | pt-br
+! class="header" data-sort-type="number" | ro
+! class="header" data-sort-type="number" | ru
+! class="header" data-sort-type="number" | sv
+! class="header" data-sort-type="number" | tr
+! class="header" data-sort-type="number" | zh-hans
+! class="header" data-sort-type="number" | zh-hant
 ! class="header" | Last update
-%s
-|}
+%s|}

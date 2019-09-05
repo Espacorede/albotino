@@ -20,7 +20,7 @@ func main() {
 
 	argv := os.Args[1:]
 
-	if argv[0] == "-d" {
+	if len(argv) > 0 && argv[0] == "-d" {
 		checkDescriptions = true
 		argv = argv[1:]
 	}
@@ -40,7 +40,10 @@ func main() {
 		bot.ProcessArticle(page, checkDescriptions)
 	}
 
-	log.Print(client.RenderPage())
+	err = ioutil.WriteFile("temp/wikilist.txt", []byte(client.RenderPage()), 0644)
+	if err != nil {
+		log.Printf("[Main] Error writing wikilist.txt->\n\t%s\n", err)
+	}
 
 	firstLoop := true
 

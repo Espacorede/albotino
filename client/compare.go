@@ -32,7 +32,7 @@ func (w *WikiClient) ProcessArticle(title string, compareDescriptions bool) {
 	titles := []string{trimTitle}
 	api, err := w.GetArticles(titles)
 	if err != nil {
-		log.Printf("[CompareTranslations] Error getting articles->\n\t%s", err.Error())
+		log.Printf("[CompareTranslations] Error getting articles->\n\t%s\n", err.Error())
 		return
 	}
 
@@ -59,7 +59,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 	api, err := w.GetArticles(titles)
 
 	if err != nil {
-		log.Printf("[CompareTranslations] Error getting articles->\n\t%s", err.Error())
+		log.Printf("[CompareTranslations] Error getting articles->\n\t%s\n", err.Error())
 		return
 	}
 
@@ -69,7 +69,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
 
-	englishPoints := float64(sumMap(links) + sumMap(templates) + sumMap(parameters))
+	englishPoints := sumMap(links)*2 + sumMap(templates)*3 + sumMap(parameters)
 
 	hasDescription := descriptionRegexp.MatchString(english)
 
@@ -86,7 +86,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 	if compareDescriptions && hasDescription {
 		descriptionFile, err = os.OpenFile("temp/descriptions.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
-			log.Printf("[CompareTranslations] Error creating descriptions.txt->\n\t%s", err.Error())
+			log.Printf("[CompareTranslations] Error creating descriptions.txt->\n\t%s\n", err.Error())
 		} else {
 			defer descriptionFile.Close()
 			descriptionBuf = bufio.NewWriter(descriptionFile)
@@ -94,7 +94,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 
 		stsToken, err = GetToken(title)
 		if err != nil {
-			log.Printf("[CompareTranslations] Error getting local token for %s->\n\t%s", title, err.Error())
+			log.Printf("[CompareTranslations] Error getting local token for %s->\n\t%s\n", title, err.Error())
 		}
 	}
 
@@ -129,16 +129,15 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 		templatePoints := sumMap(templateDiff)
 		parameterPoints := sumMap(parametersDiff)
 
-		languagePoints := float64(linkPoints + templatePoints + parameterPoints + len(wrongLinks))
+		languagePoints := linkPoints*2 + templatePoints*3 + parameterPoints + len(wrongLinks)*2
 
-		updatePoints := math.Round((languagePoints / englishPoints) * float64(englishBytes))
+		updatePoints := int64(math.Round(float64(languagePoints) / float64(englishPoints) * float64(englishBytes)))
+		languageValues[langindex] = updatePoints
 
-		languageValues[langindex] = int64(updatePoints)
-
-		if descriptionFile != nil {
+		if descriptionFile != nil && lang != "ja" {
 			stsDescription, err := GetDescription(stsToken, lang)
 			if err != nil {
-				log.Printf("[CompareTranslations] Error getting description for %s->\n\t%s", key, err.Error())
+				log.Printf("[CompareTranslations] Error getting description for %s->\n\t%s\n", key, err.Error())
 			}
 			if parametersDiff["item-description"] <= 0 {
 				descriptionMatch := descriptionRegexp.FindAllStringSubmatch(langPage, -1)
@@ -158,7 +157,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 			descriptionBuf.Flush()
 		}
 
-		log.Printf("%s: %f points", key, updatePoints)
+		log.Printf("%s: %d points", key, updatePoints)
 	}
 
 	upsertDBEntry(title, languageValues)
@@ -198,7 +197,7 @@ func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []st
 func (w *WikiClient) GetRedirects(titles []string) []string {
 	articles, err := w.GetArticles(titles)
 	if err != nil {
-		log.Printf("[GetRedirects] Error->\n\t%s", err)
+		log.Printf("[GetRedirects] Error->\n\t%s\n", err)
 		return nil
 	}
 	redirectTitles := make([]string, len(titles))

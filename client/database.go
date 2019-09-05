@@ -104,7 +104,7 @@ func GetDBEntries(outdated bool) ([]PageEntry, error) {
 		var title string
 		var points []sql.NullInt64
 		var lastseen time.Time
-		err = rows.Scan(&title, &points, &lastseen)
+		err = rows.Scan(&title, pq.Array(&points), &lastseen)
 		if err != nil {
 			return nil, err
 		}
@@ -122,7 +122,7 @@ func GetDBEntries(outdated bool) ([]PageEntry, error) {
 func RenderPage() string {
 	page, err := ioutil.ReadFile("page.txt")
 	if err != nil {
-		log.Printf("[RenderPage] Error reading page.txt:\n%s", err)
+		log.Printf("[RenderPage] Error reading page.txt->\n\t%s\n", err)
 		return ""
 	}
 	return fmt.Sprintf(string(page), RenderTable())
@@ -131,7 +131,7 @@ func RenderPage() string {
 func RenderTable() string {
 	pages, err := GetDBEntries(false)
 	if err != nil {
-		log.Printf("[RenderTable] Error getting DB entries:\n%s", err)
+		log.Printf("[RenderTable] Error getting DB entries->\n\t%s\n", err)
 		return ""
 	}
 
@@ -139,19 +139,19 @@ func RenderTable() string {
 
 	for _, page := range pages {
 		var pb strings.Builder
-		pb.WriteString(fmt.Sprintf("|- | [[%s]] ", page.Title))
+		pb.WriteString(fmt.Sprintf("|-\n\t| [[%s]] ", page.Title))
 
 		for index, language := range page.points {
 			var pointsString string
 			if language.Valid {
-				pointsString = string(language.Int64)
+				pointsString = fmt.Sprintf("%d", language.Int64)
 			} else {
 				pointsString = "N/A"
 			}
-			pb.WriteString(fmt.Sprintf("|| [[%s|%s]]", page.Title+"/"+languages[index], pointsString))
+			pb.WriteString(fmt.Sprintf("|| [[%s|%s]] ", page.Title+"/"+languages[index], pointsString))
 		}
 
-		pb.WriteString(fmt.Sprintf("|| %s ", page.lastupdate))
+		pb.WriteString(fmt.Sprintf("\n\t| data-sort-value=\"%s\" | %s \n", page.lastupdate, page.lastupdate.Format(time.RFC3339)[:10]))
 		sb.WriteString(pb.String())
 	}
 	return sb.String()
