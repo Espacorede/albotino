@@ -32,6 +32,8 @@ var steamLocale map[string]string = map[string]string{
 	"zh-hans": "tf_schinese.txt",
 	"zh-hant": "tf_tchinese.txt"}
 
+var portugalRegexp = regexp.MustCompile(`(?:(?i)Nome original inglês: .+\\n\\n)?(.+)`)
+
 func readUTF16(filename string) (string, error) {
 	file, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -78,7 +80,14 @@ func GetDescription(token string, lang string) (string, error) {
 	if descriptionMatch == nil {
 		return "", fmt.Errorf("%s Description for '%s' not found", lang, token)
 	}
+
 	description := descriptionMatch[1]
+
+	if lang == "pt" {
+		matchDescription := portugalRegexp.FindStringSubmatch(description)
+
+		description = matchDescription[1]
+	}
 
 	return description, nil
 }
