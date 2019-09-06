@@ -18,7 +18,7 @@ var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(
 
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
-var categoryRegexp = regexp.MustCompile(`(?i){{(scout|soldier|pyro|demoman|heavy|engineer|medic|sniper|spy|hat|allweapons) nav}}`)
+var categoryRegexp = regexp.MustCompile(`(?i){{(scout|soldier|pyro|demoman|heavy|engineer|medic|sniper|spy|hat|allweapons) ?nav}}`)
 
 func (w *WikiClient) ProcessArticle(title string) {
 	var trimTitle string
