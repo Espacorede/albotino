@@ -16,14 +16,7 @@ func main() {
 		log.Panicln(err)
 	}
 
-	checkDescriptions := false
-
 	argv := os.Args[1:]
-
-	if len(argv) > 0 && argv[0] == "-d" {
-		checkDescriptions = true
-		argv = argv[1:]
-	}
 
 	db, err := client.SetupDatabase(configCsv[2], configCsv[3], configCsv[4], configCsv[5], configCsv[6])
 	if err != nil {
@@ -37,7 +30,7 @@ func main() {
 	bot := client.Wiki(botUsername, botPassword)
 
 	for _, page := range argv {
-		bot.ProcessArticle(page, checkDescriptions)
+		bot.ProcessArticle(page)
 	}
 
 	if err != nil {
@@ -62,7 +55,7 @@ func main() {
 				continue
 			}
 			log.Println("Processing " + trim)
-			bot.ProcessArticle(trim, checkDescriptions)
+			bot.ProcessArticle(trim)
 
 			pages = pages[0:i]
 			ioutil.WriteFile("queue.txt", []byte(strings.Join(pages, "\n")), 0644)
@@ -76,7 +69,7 @@ func main() {
 
 			for _, pages := range db {
 				for _, page := range pages {
-					bot.ProcessArticle(page.Title, checkDescriptions)
+					bot.ProcessArticle(page.Title)
 				}
 			}
 

@@ -1,11 +1,9 @@
 package client
 
 import (
-	"bufio"
 	"fmt"
 	"log"
 	"math"
-	"os"
 	"regexp"
 	"strings"
 )
@@ -17,13 +15,11 @@ var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
 var parameter = regexp.MustCompile(`\| *([\w- ]+?) *=`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
-var descriptionRegexp = regexp.MustCompile(`\| item-description\s+= (.+)`)
-
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
 var categoryRegexp = regexp.MustCompile(`(?i){{(scout|soldier|pyro|demoman|heavy|engineer|medic|sniper|spy|hat|allweapons) nav}}`)
 
-func (w *WikiClient) ProcessArticle(title string, compareDescriptions bool) {
+func (w *WikiClient) ProcessArticle(title string) {
 	var trimTitle string
 	nonEnglish := strings.LastIndex(title, "/")
 	if nonEnglish == -1 {
@@ -47,11 +43,11 @@ func (w *WikiClient) ProcessArticle(title string, compareDescriptions bool) {
 		return
 	} else {
 		log.Printf("Comparing translations for %s", trimTitle)
-		w.CompareTranslations(trimTitle, englishPage.article, compareDescriptions)
+		w.CompareTranslations(trimTitle, englishPage.article)
 	}
 }
 
-func (w *WikiClient) CompareTranslations(title string, english string, compareDescriptions bool) {
+func (w *WikiClient) CompareTranslations(title string, english string) {
 	titles := []string{}
 
 	for _, lang := range languages {
@@ -110,31 +106,10 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 
 	englishPoints := sumMap(links)*2 + sumMap(templates)*3 + sumMap(parameters)
 
-	hasDescription := descriptionRegexp.FindStringSubmatch(english)
-
 	languageValues := make([]int64, len(languages))
 
 	for i := range languages {
 		languageValues[i] = -1
-	}
-
-	var descriptionFile *os.File
-	var descriptionBuf *bufio.Writer
-	var stsToken string
-
-	if compareDescriptions && hasDescription != nil {
-		descriptionFile, err = os.OpenFile("temp/descriptions.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-		if err != nil {
-			log.Printf("[CompareTranslations] Error creating descriptions.txt->\n\t%s\n", err.Error())
-		} else {
-			defer descriptionFile.Close()
-			descriptionBuf = bufio.NewWriter(descriptionFile)
-		}
-
-		stsToken, err = GetToken(strings.Trim(strings.ReplaceAll(hasDescription[1], "<br>", " "), " "))
-		if err != nil {
-			log.Printf("[CompareTranslations] Error getting local token for %s->\n\t%s\n", title, err.Error())
-		}
 	}
 
 	for key, value := range api {
@@ -172,35 +147,6 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 
 		updatePoints := int64(math.Round(float64(languagePoints) / float64(englishPoints) * float64(englishBytes)))
 		languageValues[langindex] = updatePoints
-
-		if descriptionFile != nil && lang != "ja" {
-			stsDescription, err := GetString(stsToken, lang)
-			if err != nil {
-				log.Printf("[CompareTranslations] Error getting description for %s->\n\t%s\n", key, err.Error())
-			}
-			if lang == "pt" {
-				matchDescription := portugalRegexp.FindStringSubmatch(stsDescription)
-
-				stsDescription = matchDescription[1]
-			}
-
-			if parametersDiff["item-description"] <= 0 {
-				descriptionMatch := descriptionRegexp.FindAllStringSubmatch(langPage, -1)
-				if descriptionMatch == nil {
-					log.Printf("[CompareTranslations] Error getting description from item-description parameter in %s. This really shouldn't happen.", key)
-				}
-				for _, match := range descriptionMatch {
-					pageDescription := match[1]
-					if stsDescription != pageDescription {
-						descriptionBuf.WriteString(fmt.Sprintf("%s has a wrong description parameter. The official description is\n\n\t'%s'\n\n", key, stsDescription))
-					}
-				}
-			} else {
-				descriptionBuf.WriteString(fmt.Sprintf("%s is missing item-description parameter. Its official description is\n\n\t'%s'\n\n", key, stsDescription))
-			}
-
-			descriptionBuf.Flush()
-		}
 
 		//log.Printf("%s: %d points", key, updatePoints)
 	}
