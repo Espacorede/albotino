@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"regexp"
+	"strings"
 	"unicode/utf16"
 )
 
@@ -55,8 +56,9 @@ func GetToken(itemName string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-
-	itemTokenRegexp, err := regexp.Compile(fmt.Sprintf(`"\[english](.+?)"\t*"(The )?%s`, itemName))
+	jankEscape := strings.ReplaceAll(strings.ReplaceAll(itemName, ".", `\.`), " ", `(?:\\n| )`)
+	tregex := fmt.Sprintf(`"\[english](.+?)"\t*"%s"`, jankEscape)
+	itemTokenRegexp, err := regexp.Compile(tregex)
 	if err != nil {
 		return "", err
 	}
@@ -68,26 +70,21 @@ func GetToken(itemName string) (string, error) {
 	return token, nil
 }
 
-func GetDescription(token string, lang string) (string, error) {
+func GetString(token string, lang string) (string, error) {
 	file := fmt.Sprintf(`%s\%s`, steamLocation, steamLocale[lang])
 	localizationFile, err := readUTF16(file)
 
-	descriptionRegexp, err := regexp.Compile(fmt.Sprintf(`"%s_(?i)desc"\t*"(.+?)"`, token))
+	tokenExpression := fmt.Sprintf(`"(?i)%s"\t*"(.+?)"`, token)
+	itemTokenRegexp, err := regexp.Compile(tokenExpression)
 	if err != nil {
 		return "", err
 	}
-	descriptionMatch := descriptionRegexp.FindStringSubmatch(localizationFile)
-	if descriptionMatch == nil {
-		return "", fmt.Errorf("%s Description for '%s' not found", lang, token)
+	tokenMatch := itemTokenRegexp.FindStringSubmatch(localizationFile)
+	if tokenMatch == nil {
+		return "", fmt.Errorf("%s string for '%s' not found", lang, token)
 	}
 
-	description := descriptionMatch[1]
+	stsString := tokenMatch[1]
 
-	if lang == "pt" {
-		matchDescription := portugalRegexp.FindStringSubmatch(description)
-
-		description = matchDescription[1]
-	}
-
-	return description, nil
+	return stsString, nil
 }

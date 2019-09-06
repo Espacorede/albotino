@@ -110,7 +110,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 
 	englishPoints := sumMap(links)*2 + sumMap(templates)*3 + sumMap(parameters)
 
-	hasDescription := descriptionRegexp.MatchString(english)
+	hasDescription := descriptionRegexp.FindStringSubmatch(english)
 
 	languageValues := make([]int64, len(languages))
 
@@ -122,7 +122,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 	var descriptionBuf *bufio.Writer
 	var stsToken string
 
-	if compareDescriptions && hasDescription {
+	if compareDescriptions && hasDescription != nil {
 		descriptionFile, err = os.OpenFile("temp/descriptions.txt", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 		if err != nil {
 			log.Printf("[CompareTranslations] Error creating descriptions.txt->\n\t%s\n", err.Error())
@@ -131,7 +131,7 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 			descriptionBuf = bufio.NewWriter(descriptionFile)
 		}
 
-		stsToken, err = GetToken(title)
+		stsToken, err = GetToken(strings.Trim(strings.ReplaceAll(hasDescription[1], "<br>", " "), " "))
 		if err != nil {
 			log.Printf("[CompareTranslations] Error getting local token for %s->\n\t%s\n", title, err.Error())
 		}
@@ -174,10 +174,16 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 		languageValues[langindex] = updatePoints
 
 		if descriptionFile != nil && lang != "ja" {
-			stsDescription, err := GetDescription(stsToken, lang)
+			stsDescription, err := GetString(stsToken, lang)
 			if err != nil {
 				log.Printf("[CompareTranslations] Error getting description for %s->\n\t%s\n", key, err.Error())
 			}
+			if lang == "pt" {
+				matchDescription := portugalRegexp.FindStringSubmatch(stsDescription)
+
+				stsDescription = matchDescription[1]
+			}
+
 			if parametersDiff["item-description"] <= 0 {
 				descriptionMatch := descriptionRegexp.FindAllStringSubmatch(langPage, -1)
 				if descriptionMatch == nil {
