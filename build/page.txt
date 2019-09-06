@@ -2,8 +2,6 @@ This page lists articles and the supposed outdatedness of each of their translat
 
 Points are calculated based on a series of factors that can be compared between the original english page and the translations. Templates, links within the wiki and parameters are taken into account, as well as how long the original article was. Not all templates and parameters are taken into account, the ones that are generally only used in translations (or only in English) are ignored, as are all external links.
 
-<!-- Source code for the algorithm that keeps track of this can be found [ here] if you want to see for yourself. nope not yet -->
-
 == Table == 
 
 {| class="wikitable grid sortable collapsible"

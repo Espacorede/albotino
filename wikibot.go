@@ -40,12 +40,13 @@ func main() {
 		bot.ProcessArticle(page, checkDescriptions)
 	}
 
-	err = ioutil.WriteFile("temp/wikilist.txt", []byte(client.RenderPage()), 0644)
 	if err != nil {
 		log.Printf("[Main] Error writing wikilist.txt->\n\t%s\n", err)
 	}
 
 	firstLoop := true
+
+	client.RenderPages()
 
 	for {
 		pagesFile, err := ioutil.ReadFile("queue.txt")
@@ -56,7 +57,7 @@ func main() {
 
 		for i := len(pages) - 1; i >= 0; i-- {
 			page := pages[i]
-			trim := strings.Trim(page, " ")
+			trim := strings.Trim(page, " \r")
 			if trim == "" {
 				continue
 			}
@@ -73,8 +74,10 @@ func main() {
 				log.Printf("Error getting outdated entries from the DB.")
 			}
 
-			for _, page := range db {
-				bot.ProcessArticle(page.Title, checkDescriptions)
+			for _, pages := range db {
+				for _, page := range pages {
+					bot.ProcessArticle(page.Title, checkDescriptions)
+				}
 			}
 
 			firstLoop = false

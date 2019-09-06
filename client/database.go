@@ -11,10 +11,26 @@ import (
 	"github.com/lib/pq"
 )
 
+var categories = []string{
+	"scout cosmetics",
+	"soldier cosmetics",
+	"pyro cosmetics",
+	"demoman cosmetics",
+	"heavy cosmetics",
+	"engineer cosmetics",
+	"medic cosmetics",
+	"sniper cosmetics",
+	"spy cosmetics",
+	"multiclass cosmetics",
+	"allclass cosmetics",
+	"weapons",
+	"other"}
+
 type PageEntry struct {
 	Title      string
 	points     []sql.NullInt64
 	lastupdate time.Time
+	category   string
 }
 
 var database *sql.DB
@@ -38,29 +54,32 @@ func SetupDatabase(host string, port string, user string, password string, db st
 		return nil, err
 	}
 
-	_, err = database.Exec("CREATE TABLE IF NOT EXISTS wikipages (title VARCHAR(255) PRIMARY KEY, points INT[], lastseen DATE)")
+	_, err = database.Exec("CREATE TABLE IF NOT EXISTS wikipages (title VARCHAR(255) PRIMARY KEY, points INT[], lastseen DATE, category varchar(255))")
 
 	upsert, err = database.Prepare(`
-		INSERT INTO wikipages (title, points, lastseen) 
-		VALUES ($1, $2, current_date)
+		INSERT INTO wikipages (title, points, lastseen, category) 
+		VALUES ($1, $2, current_date, $3)
 		ON CONFLICT (title) DO UPDATE 
 		SET points = excluded.points, 
-			lastseen = excluded.lastseen;`)
+			lastseen = excluded.lastseen,
+			category = excluded.category;`)
 	if err != nil {
 		return nil, err
 	}
 
 	allEntries, err = database.Prepare(`
-		SELECT title, points, lastseen
-		FROM wikipages`)
+		SELECT title, points, lastseen, category
+		FROM wikipages
+		ORDER BY title ASC;`)
 	if err != nil {
 		return nil, err
 	}
 
 	outOfDate, err = database.Prepare(`
-	SELECT title, points, lastseen
+	SELECT title, points, lastseen, category
 	FROM wikipages
-	WHERE lastseen < CURRENT_DATE - interval '1 week'`)
+	WHERE lastseen < CURRENT_DATE - interval '1 week'
+	ORDER BY title ASC;`)
 	if err != nil {
 		return nil, err
 	}
@@ -68,7 +87,7 @@ func SetupDatabase(host string, port string, user string, password string, db st
 	return database, err
 }
 
-func upsertDBEntry(title string, points []int64) error {
+func upsertDBEntry(title string, points []int64, category string) error {
 	sqlArray := make([]sql.NullInt64, len(points))
 
 	for index, num := range points {
@@ -79,13 +98,13 @@ func upsertDBEntry(title string, points []int64) error {
 		}
 	}
 
-	_, err := upsert.Exec(title, pq.Array(sqlArray))
+	_, err := upsert.Exec(title, pq.Array(sqlArray), category)
 
 	return err
 }
 
-func GetDBEntries(outdated bool) ([]PageEntry, error) {
-	entries := []PageEntry{}
+func GetDBEntries(outdated bool) (map[string][]PageEntry, error) {
+	entries := map[string][]PageEntry{}
 
 	var rows *sql.Rows
 	var err error
@@ -104,55 +123,71 @@ func GetDBEntries(outdated bool) ([]PageEntry, error) {
 		var title string
 		var points []sql.NullInt64
 		var lastseen time.Time
-		err = rows.Scan(&title, pq.Array(&points), &lastseen)
+		var category string
+		err = rows.Scan(&title, pq.Array(&points), &lastseen, &category)
 		if err != nil {
 			return nil, err
 		}
-
-		entries = append(entries, PageEntry{title, points, lastseen})
+		pageObj := PageEntry{title, points, lastseen, category}
+		entries[category] = append(entries[category], pageObj)
 	}
 
 	err = rows.Err()
 	if err != nil {
 		return nil, err
 	}
+
 	return entries, nil
 }
 
-func RenderPage() string {
+func RenderPages() {
 	page, err := ioutil.ReadFile("page.txt")
 	if err != nil {
 		log.Printf("[RenderPage] Error reading page.txt->\n\t%s\n", err)
-		return ""
+		return
 	}
-	return fmt.Sprintf(string(page), RenderTable())
+
+	tables, err := RenderTables()
+	if err != nil {
+		log.Printf("[RenderPage] Error rendering tables->\n\t%s\n", err)
+	} else {
+		for key, value := range tables {
+			err = ioutil.WriteFile(fmt.Sprintf("temp/%s.txt", key), []byte(fmt.Sprintf(string(page), value)), 0644)
+			if err != nil {
+				log.Printf("[RenderPage] Error saving %s->\n\t%s\n", key, err)
+			}
+		}
+	}
 }
 
-func RenderTable() string {
-	pages, err := GetDBEntries(false)
+func RenderTables() (map[string]string, error) {
+	tables := map[string]string{}
+
+	categories, err := GetDBEntries(false)
 	if err != nil {
-		log.Printf("[RenderTable] Error getting DB entries->\n\t%s\n", err)
-		return ""
+		return tables, err
 	}
 
-	var sb strings.Builder
+	for category, pages := range categories {
+		var sb strings.Builder
+		for _, page := range pages {
+			var pb strings.Builder
+			pb.WriteString(fmt.Sprintf("|-\n\t| [[%s]] ", page.Title))
 
-	for _, page := range pages {
-		var pb strings.Builder
-		pb.WriteString(fmt.Sprintf("|-\n\t| [[%s]] ", page.Title))
-
-		for index, language := range page.points {
-			var pointsString string
-			if language.Valid {
-				pointsString = fmt.Sprintf("%d", language.Int64)
-			} else {
-				pointsString = "N/A"
+			for index, language := range page.points {
+				var pointsString string
+				if language.Valid {
+					pointsString = fmt.Sprintf("%d", language.Int64)
+				} else {
+					pointsString = "N/A"
+				}
+				pb.WriteString(fmt.Sprintf("|| [[%s|%s]] ", page.Title+"/"+languages[index], pointsString))
 			}
-			pb.WriteString(fmt.Sprintf("|| [[%s|%s]] ", page.Title+"/"+languages[index], pointsString))
-		}
 
-		pb.WriteString(fmt.Sprintf("\n\t| data-sort-value=\"%s\" | %s \n", page.lastupdate, page.lastupdate.Format(time.RFC3339)[:10]))
-		sb.WriteString(pb.String())
+			pb.WriteString(fmt.Sprintf("\n\t| data-sort-value=\"%s\" | %s \n", page.lastupdate, page.lastupdate.Format(time.RFC3339)[:10]))
+			sb.WriteString(pb.String())
+		}
+		tables[category] = sb.String()
 	}
-	return sb.String()
+	return tables, nil
 }

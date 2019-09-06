@@ -14,12 +14,14 @@ var languages = []string{"ar", "cs", "da", "de", "es", "fi", "fr", "hu", "it", "
 
 var link = regexp.MustCompile(`\[\[(.+?)(?:\||]])`)
 var template = regexp.MustCompile(`{{((?:.)+?)(?:\n|}}|\|)`)
-var parameter = regexp.MustCompile(`\| *(\w+?) *={1}`)
+var parameter = regexp.MustCompile(`\| *([\w- ]+?) *=`)
 var templateLinks = regexp.MustCompile(`(?i){{(?:update|item|class) link\|(.+?)(?:}}|\|)`)
 
 var descriptionRegexp = regexp.MustCompile(`\| item-description\s+= (.+)`)
 
 var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
+
+var categoryRegexp = regexp.MustCompile(`(?i){{(scout|soldier|pyro|demoman|heavy|engineer|medic|sniper|spy|hat|allweapons) nav}}`)
 
 func (w *WikiClient) ProcessArticle(title string, compareDescriptions bool) {
 	var trimTitle string
@@ -39,12 +41,12 @@ func (w *WikiClient) ProcessArticle(title string, compareDescriptions bool) {
 	englishPage := api[trimTitle]
 
 	if englishPage.article == "" {
-		log.Println("Page " + trimTitle + " not found.")
+		log.Printf("Page %s not found.", trimTitle)
 	} else if englishPage.namespace != 0 {
-		log.Println(trimTitle + " is not main; ignoring")
+		log.Printf("%s is not main; ignoring", trimTitle)
 		return
 	} else {
-		log.Println("Comparing translations for " + trimTitle)
+		log.Printf("Comparing translations for %s", trimTitle)
 		w.CompareTranslations(trimTitle, englishPage.article, compareDescriptions)
 	}
 }
@@ -68,6 +70,43 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 	links, _ := w.GetLinks(english, "")
 	templates := GetTemplates(english)
 	parameters := GetParameters(english)
+
+	categories := categoryRegexp.FindAllStringSubmatch(english, -1)
+
+	var class string
+	var itemtype string
+	var category string
+
+	for _, match := range categories {
+		switch strings.ToLower(match[1]) {
+		case "hat":
+			itemtype = "cosmetics"
+			break
+		case "allweapons":
+			itemtype = "weapons"
+			break
+		default:
+			if class == "" {
+				class = match[1]
+			} else if class != "multiclass" {
+				class = "multiclass"
+			}
+		}
+	}
+
+	if itemtype == "" {
+		category = "others"
+	} else if class == "" {
+		if itemtype == "cosmetics" {
+			category = "allclass cosmetics"
+		} else {
+			category = "weapons"
+		}
+	} else if itemtype == "cosmetics" {
+		category = fmt.Sprintf("%s cosmetics", class)
+	} else {
+		category = "weapons"
+	}
 
 	englishPoints := sumMap(links)*2 + sumMap(templates)*3 + sumMap(parameters)
 
@@ -157,10 +196,13 @@ func (w *WikiClient) CompareTranslations(title string, english string, compareDe
 			descriptionBuf.Flush()
 		}
 
-		log.Printf("%s: %d points", key, updatePoints)
+		//log.Printf("%s: %d points", key, updatePoints)
 	}
 
-	upsertDBEntry(title, languageValues)
+	err = upsertDBEntry(title, languageValues, category)
+	if err != nil {
+		log.Printf("[CompareTranslations] Error inserting %s values to db->\n\t%s\n", title, err)
+	}
 }
 
 func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string) {
