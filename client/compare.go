@@ -6,6 +6,7 @@ import (
 	"math"
 	"regexp"
 	"strings"
+	"time"
 )
 
 var languages = []string{"ar", "cs", "da", "de", "es", "fi", "fr", "hu", "it", "ja", "ko", "nl", "no", "pl", "pt", "pt-br", "ro", "ru", "sv", "tr", "zh-hans", "zh-hant"}
@@ -29,9 +30,10 @@ func (w *WikiClient) ProcessArticle(title string) {
 	}
 	titles := []string{trimTitle}
 	api, err := w.GetArticles(titles)
-	if err != nil {
+	for err != nil {
 		log.Printf("[CompareTranslations] Error getting articles->\n\t%s\n", err.Error())
-		return
+		time.Sleep(time.Second * 30)
+		api, err = w.GetArticles(titles)
 	}
 
 	englishPage := api[trimTitle]
@@ -55,10 +57,10 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 	}
 
 	api, err := w.GetArticles(titles)
-
-	if err != nil {
+	for err != nil {
 		log.Printf("[CompareTranslations] Error getting articles->\n\t%s\n", err.Error())
-		return
+		time.Sleep(time.Second * 30)
+		api, err = w.GetArticles(titles)
 	}
 
 	englishBytes := len([]byte(english))
@@ -163,19 +165,30 @@ func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []st
 	linkSlice := []string{}
 	wrongLanguage := []string{}
 
+	mediaSlice := []string{}
 	for _, link := range links {
 		title := Title(link[1])
-		linkSlice = append(linkSlice, title)
 
-		if !strings.HasSuffix(title, lang) {
-			wrongLanguage = append(wrongLanguage, title)
+		if strings.HasPrefix(title, "File:") ||
+			strings.HasPrefix(title, "Image:") ||
+			strings.HasPrefix(title, "Media:") {
+			mediaSlice = append(mediaSlice, title)
+		} else {
+			linkSlice = append(linkSlice, title)
+
+			if !strings.HasSuffix(title, lang) {
+				wrongLanguage = append(wrongLanguage, title)
+			}
 		}
+
 	}
 	for _, link := range fromTemplates {
 		linkSlice = append(linkSlice, link[1]+"/"+lang)
 	}
 
 	finalLinks := w.GetRedirects(linkSlice)
+
+	finalLinks = append(finalLinks, mediaSlice...)
 
 	linkDict := make(map[string]int)
 
