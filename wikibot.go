@@ -6,19 +6,17 @@ import (
 	"os"
 	"strings"
 	"time"
-
-	"./client"
 )
 
 func main() {
-	configCsv, err := client.ReadCsv("config.csv")
+	configCsv, err := ReadCsv("config.csv")
 	if err != nil {
 		log.Panicln(err)
 	}
 
 	argv := os.Args[1:]
 
-	db, err := client.SetupDatabase(configCsv[2], configCsv[3], configCsv[4], configCsv[5], configCsv[6])
+	db, err := SetupDatabase(configCsv[2], configCsv[3], configCsv[4], configCsv[5], configCsv[6])
 	if err != nil {
 		log.Panicln(err)
 	}
@@ -27,7 +25,7 @@ func main() {
 	botUsername := configCsv[0]
 	botPassword := configCsv[1]
 
-	bot := client.Wiki(botUsername, botPassword)
+	bot := Wiki(botUsername, botPassword)
 
 	for _, page := range argv {
 		bot.ProcessArticle(page)
@@ -39,7 +37,7 @@ func main() {
 
 	firstLoop := true
 
-	client.RenderPages()
+	RenderPages()
 
 	for {
 		pagesFile, err := ioutil.ReadFile("queue.txt")
@@ -62,7 +60,7 @@ func main() {
 		}
 
 		if firstLoop {
-			db, err := client.GetDBEntries(true)
+			db, err := GetDBEntries(true)
 			if err != nil {
 				log.Printf("Error getting outdated entries from the DB.")
 			}

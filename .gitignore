@@ -1,4 +1,4 @@
-build/config.csv
-build/wikibot.exe
-build/queue.txt
-build/temp/*.txt
+config.csv
+albotino.exe
+queue.txt
+temp/*.txt
