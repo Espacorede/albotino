@@ -30,7 +30,7 @@ func main() {
 	for _, page := range argv {
 		for err := bot.ProcessArticle(page); err != nil; {
 			log.Printf("%s", err.Error())
-			time.Sleep(time.Second)
+			time.Sleep(time.Second * 10)
 		}
 	}
 
@@ -58,7 +58,7 @@ func main() {
 			log.Println("Processing " + trim)
 			for err := bot.ProcessArticle(trim); err != nil; {
 				log.Printf("%s", err.Error())
-				time.Sleep(time.Second)
+				time.Sleep(time.Second * 10)
 			}
 
 			pages = pages[0:i]
