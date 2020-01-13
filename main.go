@@ -28,9 +28,9 @@ func main() {
 	bot := Wiki(botUsername, botPassword)
 
 	for _, page := range argv {
-		for err := bot.ProcessArticle(page); err != nil; {
-			log.Printf("%s", err.Error())
-			time.Sleep(time.Second * 10)
+		err := bot.ProcessArticle(page)
+		if err != nil {
+			log.Fatalf("%s", err)
 		}
 	}
 
@@ -56,9 +56,9 @@ func main() {
 				continue
 			}
 			log.Println("Processing " + trim)
-			for err := bot.ProcessArticle(trim); err != nil; {
-				log.Printf("%s", err.Error())
-				time.Sleep(time.Second * 10)
+			err := bot.ProcessArticle(page)
+			if err != nil {
+				log.Fatalf("%s", err)
 			}
 
 			pages = pages[0:i]
