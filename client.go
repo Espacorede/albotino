@@ -52,7 +52,7 @@ func Wiki(username string, password string) *WikiClient {
 	suffixList := suffixList{}
 	cookieOptions := cookiejar.Options{PublicSuffixList: suffixList}
 	cookieJar, _ := cookiejar.New(&cookieOptions)
-	webClient := http.Client{Jar: cookieJar, Timeout: time.Second * 10}
+	webClient := http.Client{Jar: cookieJar, Timeout: time.Second * 60}
 	token := getToken(&webClient, "login")
 
 	parameters := fmt.Sprintf("?action=login&lgname=%s&lgpassword=%s&lgtoken=%s&format=json", username, password, token)
@@ -125,7 +125,7 @@ func (w *WikiClient) RequestLoop() {
 			} else {
 				w.channel <- resp
 			}
-			time.Sleep(time.Second)
+			time.Sleep(time.Second / 2)
 		}
 	}()
 }
@@ -167,13 +167,13 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]WikiPage, error) {
 	if err != nil {
 		log.Println(titles)
 		log.Println(string(api))
-		return nil, fmt.Errorf("[GetArticles] Error getting json pages->\n\t%s", err)
+		return nil, fmt.Errorf("[GetArticles] Error getting json pages\n%s", err)
 	}
 
 	getPage := func(key []byte, value []byte, _ jsonparser.ValueType, _ int) error {
 		title, err := jsonparser.GetString(value, "title")
 		if err != nil {
-			return fmt.Errorf("[GetArticles] Error getting json page title->\n\t%s", err)
+			return fmt.Errorf("[GetArticles] Error getting json page title\n%s", err)
 		}
 		namespace, err := jsonparser.GetInt(value, "ns")
 		rev, _, _, err := jsonparser.Get(value, "revisions")
@@ -189,7 +189,7 @@ func (w *WikiClient) GetArticles(titles []string) (map[string]WikiPage, error) {
 	}
 	err = jsonparser.ObjectEach(pages, getPage)
 	if err != nil {
-		return nil, fmt.Errorf("[GetArticles] Error iterating over pages->\n\t%s", err)
+		return nil, fmt.Errorf("[GetArticles] Error iterating over pages\n%s", err)
 	}
 
 	return content, nil

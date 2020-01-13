@@ -6,7 +6,6 @@ import (
 	"math"
 	"regexp"
 	"strings"
-	"time"
 )
 
 var languages = []string{"ar", "cs", "da", "de", "es", "fi", "fr", "hu", "it", "ja", "ko", "nl", "no", "pl", "pt", "pt-br", "ro", "ru", "sv", "tr", "zh-hans", "zh-hant"}
@@ -20,7 +19,7 @@ var redirectRegexp = regexp.MustCompile(`(?i)#redirect \[\[(.*?)]]`)
 
 var categoryRegexp = regexp.MustCompile(`(?i){{(scout|soldier|pyro|demoman|heavy|engineer|medic|sniper|spy|hat|allweapons) ?nav}}`)
 
-func (w *WikiClient) ProcessArticle(title string) {
+func (w *WikiClient) ProcessArticle(title string) error {
 	var trimTitle string
 	nonEnglish := strings.LastIndex(title, "/")
 	if nonEnglish == -1 {
@@ -31,9 +30,7 @@ func (w *WikiClient) ProcessArticle(title string) {
 	titles := []string{trimTitle}
 	api, err := w.GetArticles(titles)
 	for err != nil {
-		log.Printf("[CompareTranslations] Error getting articles->\n\t%s\n", err.Error())
-		time.Sleep(time.Second * 30)
-		api, err = w.GetArticles(titles)
+		return fmt.Errorf("[CompareTranslations] Error getting articles\n%s", err.Error())
 	}
 
 	englishPage := api[trimTitle]
@@ -42,14 +39,16 @@ func (w *WikiClient) ProcessArticle(title string) {
 		log.Printf("Page %s not found.", trimTitle)
 	} else if englishPage.namespace != 0 {
 		log.Printf("%s is not main; ignoring", trimTitle)
-		return
+		return nil
 	} else {
 		log.Printf("Comparing translations for %s", trimTitle)
-		w.CompareTranslations(trimTitle, englishPage.article)
+		return w.CompareTranslations(trimTitle, englishPage.article)
 	}
+
+	return nil
 }
 
-func (w *WikiClient) CompareTranslations(title string, english string) {
+func (w *WikiClient) CompareTranslations(title string, english string) error {
 	titles := []string{}
 
 	for _, lang := range languages {
@@ -58,9 +57,7 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 	api, err := w.GetArticles(titles)
 	for err != nil {
-		log.Printf("[CompareTranslations] Error getting articles->\n\t%s\n", err.Error())
-		time.Sleep(time.Second * 30)
-		api, err = w.GetArticles(titles)
+		fmt.Errorf("[CompareTranslations] Error getting articles\n%s", err.Error())
 	}
 
 	englishBytes := len([]byte(english))
@@ -155,8 +152,9 @@ func (w *WikiClient) CompareTranslations(title string, english string) {
 
 	err = upsertDBEntry(title, languageValues, category)
 	if err != nil {
-		log.Printf("[CompareTranslations] Error inserting %s values to db->\n\t%s\n", title, err)
+		fmt.Errorf("[CompareTranslations] Error inserting %s values to db\n%s", title, err)
 	}
+	return nil
 }
 
 func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []string) {
@@ -204,7 +202,7 @@ func (w *WikiClient) GetLinks(article string, lang string) (map[string]int, []st
 func (w *WikiClient) GetRedirects(titles []string) []string {
 	articles, err := w.GetArticles(titles)
 	if err != nil {
-		log.Printf("[GetRedirects] Error->\n\t%s\n", err)
+		log.Printf("[GetRedirects] Error\n%", err)
 		return nil
 	}
 	redirectTitles := make([]string, len(titles))

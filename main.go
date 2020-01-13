@@ -28,11 +28,13 @@ func main() {
 	bot := Wiki(botUsername, botPassword)
 
 	for _, page := range argv {
-		bot.ProcessArticle(page)
+		for err := bot.ProcessArticle(page); err != nil; {
+			log.Printf("%s", err.Error())
+		}
 	}
 
 	if err != nil {
-		log.Printf("[Main] Error writing wikilist.txt->\n\t%s\n", err)
+		log.Printf("[Main] Error writing wikilist.txt\n%s", err)
 	}
 
 	firstLoop := true
@@ -53,7 +55,9 @@ func main() {
 				continue
 			}
 			log.Println("Processing " + trim)
-			bot.ProcessArticle(trim)
+			for err := bot.ProcessArticle(trim); err != nil; {
+				log.Printf("%s", err.Error())
+			}
 
 			pages = pages[0:i]
 			ioutil.WriteFile("queue.txt", []byte(strings.Join(pages, "\n")), 0644)
